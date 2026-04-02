@@ -12,24 +12,44 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
+          tabBarActiveTintColor: '#ffffff', 
+          tabBarInactiveTintColor: '#000000', 
+          headerShown: false,
+          tabBarButton: HapticTab,
+          
+      tabBarIconStyle: {
+        marginTop: 20,
+        alignSelf: 'center'
+      },
+
+      tabBarStyle: {
+        backgroundColor: '#67C5C0',
+        height: 80,
+      
+
+        borderTopWidth: 0, 
+        elevation: 0,        
+        shadowColor: 'transparent' 
+      },
+    
+
+    }}>
+     <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={32} name="house.fill" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="explore"
+     <Tabs.Screen
+        name="pesquisa_cliente"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+          title: '',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={32} name="magnifyingglass" color={color} />
+        ),
+      }}
+     />
     </Tabs>
   );
 }

@@ -1,5 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import logo from 'C:/Users/Joao/Desktop/urbanbook/mobile/assets/images/logo.png'
+import logo from '@/assets/images/logo.png';
 export default function App() {
   return (
     <View style={styles.container}>

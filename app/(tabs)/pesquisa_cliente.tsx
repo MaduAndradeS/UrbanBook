@@ -1,7 +1,8 @@
-import { View, Text, TextInput, StyleSheet, Image, FlatList } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import logo from '@/assets/images/logo.png';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
+import { Dimensions, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const dados = [
   { id: '1', titulo: 'Encanador', img1: require('@/assets/images/encanador1.png'), img2: require('@/assets/images/encanador2.png') },
@@ -10,62 +11,65 @@ const dados = [
   { id: '4', titulo: 'Limpeza', img1: require('@/assets/images/limpeza1.png'), img2: require('@/assets/images/limpeza2.png') },
   { id: '5', titulo: 'Podologia', img1: require('@/assets/images/podologia1.png'), img2: require('@/assets/images/podologia2.png') },
   { id: '6', titulo: 'Barbeiro', img1: require('@/assets/images/barbeiro1.png'), img2: require('@/assets/images/barbeiro2.png') },
-  { id: '7', titulo: 'Eletricista', img1: require('@/assets/images/eletricista1.jpg'), img2: require('@/assets/images/eletricista2.jpg') },
-  { id: '8', titulo: 'Depilação', img1: require('@/assets/images/depilacao1.jpg'), img2: require('@/assets/images/depilacao2.jpg') },
+  { id: '7', titulo: 'Eletricista', img1: require('@/assets/images/eletricista1.png'), img2: require('@/assets/images/eletricista2.png') },
+  { id: '8', titulo: 'Depilação', img1: require('@/assets/images/depilacao2.png'), img2: require('@/assets/images/depilacao1.png') }
 ];
+const largura = Dimensions.get('window').width;
+const CARD_WIDTH = (largura - 30) / 2; // 10 padding + 10 padding + 10 espaço
 
 export default function PesquisaCliente() {
+  const router = useRouter();
   return (
-    <FlatList
-      data={dados}
-      keyExtractor={(item) => item.id}
-      numColumns={2}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingBottom: 20,
-        backgroundColor: '#ffffff',
-        paddingHorizontal: 10
-      }}
-      columnWrapperStyle={{
-        gap: 10
-      }}
+    <View style={styles.container}>
+      <FlatList
+        data={dados}
+        style={{ flex: 1 }}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={styles.row}
+        initialNumToRender={8}
 
-      ListHeaderComponent={
-        <View>
-          {/* TOPO */}
-          <View style={styles.top}>
-            <Text style={styles.title}>Urban Book</Text>
-            <Image source={logo} style={styles.logo} />
+        ListHeaderComponent={
+          <View>
+            {/* TOPO */}
+            <View style={styles.top}>
+              <Text style={styles.title}>Urban Book</Text>
+              <Image source={logo} style={styles.logo} />
+            </View>
+
+            {/* BARRA DE PESQUISA */}
+            <View style={styles.barraPesquisa}>
+              <Ionicons name="search" size={18} color="#000" />
+              <TextInput
+                placeholder="Pesquisar..."
+                placeholderTextColor="#8e8e8e"
+                style={styles.input}
+              />
+            </View>
+
+            {/* TÍTULO */}
+            <Text style={styles.tituloSecao}>
+              Mais buscados perto de você
+            </Text>
           </View>
+        }
 
-          {/* BARRA DE PESQUISA */}
-          <View style={styles.barraPesquisa}>
-            <Ionicons name="search" size={18} color="#000" />
-            <TextInput
-              placeholder="Pesquisar..."
-              placeholderTextColor="#8e8e8e"
-              style={styles.input}
-            />
-          </View>
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+          style={styles.card}
+          onPress={() => router.push('/recomendados')}>
+            <Text style={styles.cardTitulo}>{item.titulo}</Text>
 
-          {/* TÍTULO */}
-          <Text style={styles.tituloSecao}>
-            Mais buscados perto de você
-          </Text>
-        </View>
-      }
-
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.cardTitulo}>{item.titulo}</Text>
-
-          <View style={styles.imagensContainer}>
-            <Image source={item.img1} style={styles.imgMain} />
-            <Image source={item.img2} style={styles.imgOverlay} />
-          </View>
-        </View>
-      )}
-    />
+            <View style={styles.imagensContainer}>
+              <Image source={item.img1} style={styles.imgMain} />
+              <Image source={item.img2} style={styles.imgOverlay} />
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
   );
 }
 
@@ -73,6 +77,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff'
+  },
+
+  listContent: {
+    paddingBottom: 20,
+    paddingHorizontal: 10
+  },
+
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 10
   },
 
   top: {
@@ -91,8 +106,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#757575',
-    marginLeft: 20
+    color: '#757575'
   },
 
   barraPesquisa: {
@@ -114,7 +128,7 @@ const styles = StyleSheet.create({
   },
 
   tituloSecao: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     marginLeft: 20,
     marginTop: 15,
@@ -123,8 +137,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: CARD_WIDTH,
     height: 160,
     backgroundColor: '#ffffff',
     marginBottom: 15,

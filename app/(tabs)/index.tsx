@@ -1,6 +1,8 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import logo from 'C:/Users/Joao/Desktop/urbanbook/mobile/assets/images/logo.png'
+import { useRouter } from 'expo-router';
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import logo from '../../assets/images/logo.png';
 export default function App() {
+  const router = useRouter();
   return (
     <View style={styles.container}>
 
@@ -28,7 +30,7 @@ export default function App() {
           <Text style={styles.loginText}>Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.registerButton}>
+        <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/cad_emp')}>
           <Text style={styles.registerText}>Cadastre-se</Text>
         </TouchableOpacity>
 

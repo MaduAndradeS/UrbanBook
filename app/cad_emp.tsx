@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -12,7 +13,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import logo from '../../assets/images/logo.png';
+import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -23,6 +24,17 @@ export default function App() {
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Prestador');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+
+  const [nome, setNome] = useState('');
+  const [cnpj, setCnpj] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [cep, setCep] = useState('');
+  const [numero, setNumero] = useState('');
+  const [rua, setRua] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [uf, setUf] = useState('');
 
   const services = [
     'Encanador',
@@ -54,6 +66,31 @@ export default function App() {
     setSelectedServices(selectedServices.filter(item => item !== service));
   }
 
+  function validarCadastro() {
+    if (
+      !nome.trim() ||
+      !cnpj.trim() ||
+      !email.trim() ||
+      !senha.trim() ||
+      !cep.trim() ||
+      !numero.trim() ||
+      !rua.trim() ||
+      !bairro.trim() ||
+      !cidade.trim() ||
+      !uf.trim()
+    ) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+
+    if (selectedServices.length === 0) {
+      Alert.alert('Atenção', 'Selecione pelo menos um serviço.');
+      return;
+    }
+
+    Alert.alert('Sucesso', 'Cadastro validado com sucesso!');
+  }
+
   return (
     <>
       <ScrollView
@@ -64,7 +101,7 @@ export default function App() {
         <View style={styles.top}>
           <Image
             source={logo}
-            style={{ marginTop: 60, marginBottom: 8, width: 125, height: 125 }}
+            style={{ marginTop: 0, marginBottom: 8, width: 125, height: 125 }}
           />
 
           <Text style={styles.title}>Urban Book</Text>
@@ -81,16 +118,35 @@ export default function App() {
           </TouchableOpacity>
 
           <Text style={styles.label}>Nome</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+          />
 
           <Text style={styles.label}>CNPJ</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={cnpj}
+            onChangeText={setCnpj}
+          />
 
           <Text style={styles.label}>E-mail</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
           <Text style={styles.label}>Senha</Text>
-          <TextInput style={styles.input} secureTextEntry />
+          <TextInput
+            style={styles.input}
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+          />
 
           <Text style={styles.label}>Serviços</Text>
           <TouchableOpacity
@@ -127,34 +183,65 @@ export default function App() {
           <View style={styles.row}>
             <View style={styles.inputSmallContainer}>
               <Text style={styles.smallLabel}>CEP</Text>
-              <TextInput style={styles.inputSmall} />
+              <TextInput
+                style={styles.inputSmall}
+                value={cep}
+                onChangeText={setCep}
+                keyboardType="numeric"
+              />
             </View>
 
             <View style={styles.inputSmallContainer}>
               <Text style={styles.smallLabel}>Número</Text>
-              <TextInput style={styles.inputSmall} />
+              <TextInput
+                style={styles.inputSmall}
+                value={numero}
+                onChangeText={setNumero}
+                keyboardType="numeric"
+              />
             </View>
           </View>
 
           <Text style={styles.label}>Rua</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={rua}
+            onChangeText={setRua}
+          />
 
           <Text style={styles.label}>Bairro</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={bairro}
+            onChangeText={setBairro}
+          />
 
           <View style={styles.row}>
             <View style={styles.inputCityContainer}>
               <Text style={styles.smallLabel}>Cidade</Text>
-              <TextInput style={styles.inputCity} />
+              <TextInput
+                style={styles.inputCity}
+                value={cidade}
+                onChangeText={setCidade}
+              />
             </View>
 
             <View style={styles.inputUfContainer}>
               <Text style={styles.smallLabel}>UF</Text>
-              <TextInput style={styles.inputUf} />
+              <TextInput
+                style={styles.inputUf}
+                value={uf}
+                onChangeText={setUf}
+                autoCapitalize="characters"
+                maxLength={2}
+              />
             </View>
           </View>
 
-          <TouchableOpacity style={styles.loginButton}>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={validarCadastro}
+          >
             <Text style={styles.loginText}>Solicitar cadastro</Text>
           </TouchableOpacity>
         </View>
@@ -277,11 +364,11 @@ const styles = StyleSheet.create({
   },
 
   top: {
-    height: screenHeight / 3,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'flex-start', 
+  paddingTop: 10, 
+  paddingBottom: 20,              
   },
 
   title: {

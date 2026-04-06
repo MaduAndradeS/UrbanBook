@@ -1,18 +1,19 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import logo from '../../assets/images/logo.png';
+import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -20,6 +21,37 @@ export default function CadCliente() {
   const router = useRouter();
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Cliente');
+
+  const [nome, setNome] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [email, setEmail] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [cep, setCep] = useState('');
+  const [numero, setNumero] = useState('');
+  const [rua, setRua] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [uf, setUf] = useState('');
+
+  function validarCadastro() {
+    if (
+      !nome.trim() ||
+      !cpf.trim() ||
+      !email.trim() ||
+      !dataNascimento.trim() ||
+      !cep.trim() ||
+      !numero.trim() ||
+      !rua.trim() ||
+      !bairro.trim() ||
+      !cidade.trim() ||
+      !uf.trim()
+    ) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+
+    Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+  }
 
   return (
     <>
@@ -31,7 +63,7 @@ export default function CadCliente() {
         <View style={styles.top}>
           <Image
             source={logo}
-            style={{ marginTop: 60, marginBottom: 8, width: 125, height: 125 }}
+            style={{ marginTop: 0, marginBottom: 8, width: 125, height: 125 }}
           />
 
           <Text style={styles.title}>Urban Book</Text>
@@ -48,53 +80,90 @@ export default function CadCliente() {
           </TouchableOpacity>
 
           <Text style={styles.label}>Nome</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+          />
 
           <Text style={styles.label}>CPF</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={cpf}
+            onChangeText={setCpf}
+          />
 
           <Text style={styles.label}>E-mail</Text>
-          <TextInput style={styles.input} />
-
-          <Text style={styles.label}>Senha</Text>
-          <TextInput style={styles.input} secureTextEntry />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
 
           <Text style={styles.label}>Data de nascimento</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={dataNascimento}
+            onChangeText={setDataNascimento}
+          />
 
           <Text style={styles.label}>Endereço</Text>
 
           <View style={styles.row}>
             <View style={styles.inputSmallContainer}>
               <Text style={styles.smallLabel}>CEP</Text>
-              <TextInput style={styles.inputSmall} />
+              <TextInput
+                style={styles.inputSmall}
+                value={cep}
+                onChangeText={setCep}
+              />
             </View>
 
             <View style={styles.inputSmallContainer}>
               <Text style={styles.smallLabel}>Número</Text>
-              <TextInput style={styles.inputSmall} />
+              <TextInput
+                style={styles.inputSmall}
+                value={numero}
+                onChangeText={setNumero}
+              />
             </View>
           </View>
 
           <Text style={styles.label}>Rua</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={rua}
+            onChangeText={setRua}
+          />
 
           <Text style={styles.label}>Bairro</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={bairro}
+            onChangeText={setBairro}
+          />
 
           <View style={styles.row}>
             <View style={styles.inputCityContainer}>
               <Text style={styles.smallLabel}>Cidade</Text>
-              <TextInput style={styles.inputCity} />
+              <TextInput
+                style={styles.inputCity}
+                value={cidade}
+                onChangeText={setCidade}
+              />
             </View>
 
             <View style={styles.inputUfContainer}>
               <Text style={styles.smallLabel}>UF</Text>
-              <TextInput style={styles.inputUf} />
+              <TextInput
+                style={styles.inputUf}
+                value={uf}
+                onChangeText={setUf}
+              />
             </View>
           </View>
 
-          <TouchableOpacity style={styles.loginButton}>
+          <TouchableOpacity style={styles.loginButton} onPress={validarCadastro}>
             <Text style={styles.loginText}>Cadastrar</Text>
           </TouchableOpacity>
         </View>
@@ -163,11 +232,11 @@ const styles = StyleSheet.create({
   },
 
   top: {
-    height: screenHeight / 3,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'flex-start', 
+  paddingTop: 10, 
+  paddingBottom: 20,              
   },
 
   title: {

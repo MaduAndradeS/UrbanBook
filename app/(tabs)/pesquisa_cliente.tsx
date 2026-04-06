@@ -1,18 +1,17 @@
-import logo from '@/assets/images/logo.png';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { Dimensions, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import logo from '../../assets/images/logo.png';
 
 const dados = [
-  { id: '1', titulo: 'Encanador', img1: require('@/assets/images/encanador1.png'), img2: require('@/assets/images/encanador2.png') },
-  { id: '2', titulo: 'Manicure', img1: require('@/assets/images/manicure1.png'), img2: require('@/assets/images/manicure2.png') },
-  { id: '3', titulo: 'Cabeleireiro', img1: require('@/assets/images/cabeleireiro1.png'), img2: require('@/assets/images/cabeleireiro2.png') },
-  { id: '4', titulo: 'Limpeza', img1: require('@/assets/images/limpeza1.png'), img2: require('@/assets/images/limpeza2.png') },
-  { id: '5', titulo: 'Podologia', img1: require('@/assets/images/podologia1.png'), img2: require('@/assets/images/podologia2.png') },
-  { id: '6', titulo: 'Barbeiro', img1: require('@/assets/images/barbeiro1.png'), img2: require('@/assets/images/barbeiro2.png') },
-  { id: '7', titulo: 'Eletricista', img1: require('@/assets/images/eletricista1.png'), img2: require('@/assets/images/eletricista2.png') },
-  { id: '8', titulo: 'Depilação', img1: require('@/assets/images/depilacao2.png'), img2: require('@/assets/images/depilacao1.png') }
+  { id: '1', titulo: 'Encanador', img1: require('../../assets/images/encanador1.png'), img2: require('../../assets/images/encanador2.png') },
+  { id: '2', titulo: 'Manicure', img1: require('../../assets/images/manicure1.png'), img2: require('../../assets/images/manicure2.png') },
+  { id: '3', titulo: 'Cabeleireiro', img1: require('../../assets/images/cabeleireiro1.png'), img2: require('../../assets/images/cabeleireiro2.png') },
+  { id: '4', titulo: 'Limpeza', img1: require('../../assets/images/limpeza1.png'), img2: require('../../assets/images/limpeza2.png') },
+  { id: '5', titulo: 'Podologia', img1: require('../../assets/images/podologia1.png'), img2: require('../../assets/images/podologia2.png') },
+  { id: '6', titulo: 'Barbeiro', img1: require('../../assets/images/barbeiro1.png'), img2: require('../../assets/images/barbeiro2.png') },
+  { id: '7', titulo: 'Eletricista', img1: require('../../assets/images/eletricista1.png'), img2: require('../../assets/images/eletricista2.png') },
+  { id: '8', titulo: 'Depilação', img1: require('../../assets/images/depilacao2.png'), img2: require('../../assets/images/depilacao1.png') }
 ];
 const largura = Dimensions.get('window').width;
 const CARD_WIDTH = (largura - 30) / 2; // 10 padding + 10 padding + 10 espaço

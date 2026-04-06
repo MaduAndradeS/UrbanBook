@@ -1,4 +1,4 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import {
   Platform,
@@ -8,54 +8,63 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { Calendar, DateData } from 'react-native-calendars';
+
+type Periodo = {
+  inicio: Date;
+  fim: Date;
+};
 
 export default function Disponibilidade() {
-  const [duracao, setDuracao] = useState(30);
+  const [duracao, setDuracao] = useState<number>(30);
 
-  const [periodos, setPeriodos] = useState([
+  const [periodos, setPeriodos] = useState<Periodo[]>([
     { inicio: new Date(), fim: new Date() }
   ]);
 
-  const [showPicker, setShowPicker] = useState(false);
+  const [showPicker, setShowPicker] = useState<boolean>(false);
   const [tipoPicker, setTipoPicker] = useState<'inicio' | 'fim'>('inicio');
-  const [periodoIndex, setPeriodoIndex] = useState(0);
+  const [periodoIndex, setPeriodoIndex] = useState<number>(0);
 
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
 
-  // ✅ NOVO: controle de dias ativos
   const [diasAtivos, setDiasAtivos] = useState<Record<string, boolean>>({});
-
   const [horariosPorDia, setHorariosPorDia] = useState<Record<string, string[]>>({});
   const [bloqueados, setBloqueados] = useState<Record<string, string[]>>({});
 
-  function formatarHora(date: Date) {
+  function formatarHora(date: Date): string {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   }
 
-  function toMin(date: Date) {
+  function toMin(date: Date): number {
     return date.getHours() * 60 + date.getMinutes();
   }
 
   function gerarHorarios(dia: string) {
-    let lista: string[] = [];
+    const set = new Set<string>();
 
-    periodos.forEach(p => {
-      let t = toMin(p.inicio);
+    periodos.forEach((p: Periodo) => {
+      const inicio = toMin(p.inicio);
       const fim = toMin(p.fim);
+
+      if (inicio >= fim) return; // validação
+
+      let t = inicio;
 
       while (t + duracao <= fim) {
         const h = Math.floor(t / 60);
         const m = t % 60;
 
-        lista.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        set.add(horario);
+
         t += duracao;
       }
     });
 
     setHorariosPorDia(prev => ({
       ...prev,
-      [dia]: lista
+      [dia]: Array.from(set)
     }));
   }
 
@@ -68,29 +77,29 @@ export default function Disponibilidade() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
 
-      {/* CONFIGURAÇÃO */}
       <Text style={styles.titulo}>Configuração</Text>
 
       <Text style={styles.subtitulo}>Duração</Text>
 
       <View style={styles.linha}>
-        {[30, 60, 90, 120].map(d => (
+        {[30, 60, 90, 120, 150, 180].map((d: number) => (
           <TouchableOpacity
             key={d}
             style={[styles.botao, duracao === d && styles.selecionado]}
             onPress={() => setDuracao(d)}
           >
-            <Text style={duracao === d && { color: '#fff' }}>
+            <Text style={duracao === d ? { color: '#fff' } : undefined}>
               {d >= 60 ? `${d / 60}h` : `${d}min`}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={styles.subtitulo}>Períodos</Text>
+      <Text style={styles.subtitulo}>Horário de Funcionamento</Text>
 
-      {periodos.map((p, i) => (
-        <View key={i} style={styles.periodo}>
+      {periodos.map((p: Periodo, i: number) => (
+        <View key={`${p.inicio}-${p.fim}-${i}`} style={styles.periodo}>
+
           <TouchableOpacity
             onPress={() => abrirPicker(i, 'inicio')}
             style={styles.timeBtn}
@@ -104,51 +113,64 @@ export default function Disponibilidade() {
           >
             <Text>Fim: {formatarHora(p.fim)}</Text>
           </TouchableOpacity>
+
         </View>
       ))}
 
       <TouchableOpacity
         onPress={() =>
-          setPeriodos(prev => [...prev, { inicio: new Date(), fim: new Date() }])
+          setPeriodos((prev: Periodo[]) => [
+            ...prev,
+            { inicio: new Date(), fim: new Date() }
+          ])
         }
       >
-        <Text style={{ marginTop: 10 }}>+ Adicionar período</Text>
+        <Text style={{ marginTop: 10 }}>+ Adicionar Horário</Text>
       </TouchableOpacity>
 
-      {/* CALENDÁRIO */}
       <Calendar
-        onDayPress={(day) => {
+        onDayPress={(day: DateData) => {
           const dia = day.dateString;
 
-          // toggle dia ativo
-          setDiasAtivos(prev => {
-            const novoEstado = !prev[dia];
+          const novoEstado = !diasAtivos[dia]; // calcula antes
 
-            return {
-              ...prev,
-              [dia]: novoEstado
-            };
-          });
+          setDiasAtivos(prev => ({
+            ...prev,
+            [dia]: novoEstado
+          }));
 
           setDiaSelecionado(dia);
 
-          // gera horários apenas se ativou
-          if (!diasAtivos[dia]) {
+          if (novoEstado) {
             gerarHorarios(dia);
+          } else {
+            // opcional: limpar horários ao desmarcar
+            setHorariosPorDia(prev => {
+              const copy = { ...prev };
+              delete copy[dia];
+              return copy;
+            });
+
+            setBloqueados(prev => {
+              const copy = { ...prev };
+              delete copy[dia];
+              return copy;
+            });
           }
         }}
-        markedDates={Object.fromEntries(
-          Object.keys(diasAtivos).map(dia => [
-            dia,
-            {
-              selected: true,
-              selectedColor: '#000'
-            }
-          ])
-        )}
+          markedDates={Object.fromEntries(
+            Object.entries(diasAtivos)
+              .filter(([_, ativo]) => ativo)
+              .map(([dia]) => [
+                dia,
+                {
+                  selected: true,
+                  selectedColor: '#000'
+                }
+              ])
+          )}
       />
 
-      {/* HORÁRIOS */}
       {diaSelecionado && diasAtivos[diaSelecionado] && (
         <>
           <Text style={styles.subtitulo}>
@@ -156,7 +178,7 @@ export default function Disponibilidade() {
           </Text>
 
           <View style={styles.lista}>
-            {(horariosPorDia[diaSelecionado] || []).map(h => {
+            {(horariosPorDia[diaSelecionado] || []).map((h: string) => {
               const bloqueado = bloqueados[diaSelecionado]?.includes(h);
 
               return (
@@ -169,7 +191,7 @@ export default function Disponibilidade() {
                       return {
                         ...prev,
                         [diaSelecionado]: lista.includes(h)
-                          ? lista.filter(x => x !== h)
+                          ? lista.filter((x: string) => x !== h)
                           : [...lista, h]
                       };
                     });
@@ -187,10 +209,10 @@ export default function Disponibilidade() {
         </>
       )}
 
-      {/* PICKER */}
       {showPicker && (
         <View style={styles.pickerOverlay}>
           <View style={styles.pickerBox}>
+
             <Text style={styles.pickerTitle}>
               {tipoPicker === 'inicio' ? 'Selecionar início' : 'Selecionar fim'}
             </Text>
@@ -198,15 +220,15 @@ export default function Disponibilidade() {
             <DateTimePicker
               value={periodos[periodoIndex][tipoPicker]}
               mode="time"
-              is24Hour={true}
+              is24Hour
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
+              onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
                 if (event.type === 'dismissed' || !selectedDate) {
                   setShowPicker(false);
                   return;
                 }
 
-                setPeriodos(prev => {
+                setPeriodos((prev: Periodo[]) => {
                   const copy = [...prev];
 
                   copy[periodoIndex] = {
@@ -225,6 +247,7 @@ export default function Disponibilidade() {
             >
               <Text style={{ color: '#fff' }}>Concluir</Text>
             </TouchableOpacity>
+
           </View>
         </View>
       )}

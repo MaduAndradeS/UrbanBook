@@ -273,7 +273,7 @@ export default function App() {
                         setTypeModalVisible(false);
 
                         if (item === 'Cliente') {
-                          router.push('/cad_cliente');
+                          router.replace('/cad_cliente');
                         } else {
                           setSelectedType(item);
                         }

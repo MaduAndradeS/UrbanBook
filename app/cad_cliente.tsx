@@ -195,7 +195,7 @@ export default function CadCliente() {
                         setTypeModalVisible(false);
 
                         if (item === 'Prestador') {
-                          router.push('/cad_emp');
+                          router.replace('/cad_emp');
                         } else {
                           setSelectedType(item);
                         }

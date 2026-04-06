@@ -30,7 +30,7 @@ export default function App() {
           <Text style={styles.loginText}>Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/cad_emp')}>
+        <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/cad_cliente')}>
           <Text style={styles.registerText}>Cadastre-se</Text>
         </TouchableOpacity>
 

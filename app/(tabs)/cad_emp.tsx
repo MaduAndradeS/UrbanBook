@@ -89,6 +89,9 @@ export default function App() {
           <Text style={styles.label}>E-mail</Text>
           <TextInput style={styles.input} />
 
+          <Text style={styles.label}>Senha</Text>
+          <TextInput style={styles.input} secureTextEntry />
+
           <Text style={styles.label}>Serviços</Text>
           <TouchableOpacity
             style={styles.inputSelect}

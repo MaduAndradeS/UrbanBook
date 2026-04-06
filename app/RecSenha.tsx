@@ -1,6 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import logo from '../../assets/images/logo.png';
-import { router } from 'expo-router';
+import logo from '../assets/images/logo.png';
 export default function App() {
   return (
     <View style={styles.container}>
@@ -11,32 +10,20 @@ export default function App() {
 
         <Text style={styles.title}>Urban Book</Text>
         <Text style={styles.subtitle}>
-          Encontre profissionais perto de você
+          Recuperação de senha
         </Text>
       </View>
 
       <View style={styles.bottom}>
+        <Text style={styles.orient}>
+            Enviaremos um link de recuperação ao seu E-mail
+        </Text>
 
         <Text style={styles.label}>E-mail</Text>
         <TextInput style={styles.input} />
 
-        <Text style={styles.label}>Senha</Text>
-        <TextInput style={styles.input} secureTextEntry />
-
-        <TouchableOpacity onPress={() => router.push('/RecSenha')}>
-        <Text style={styles.forgot}>Esqueceu a senha?</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.loginButton}>
-          <Text style={styles.loginText}>Login</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.registerButton}>
-          <Text style={styles.registerText}>Cadastre-se</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.googleButton}>
-          <Text>Continuar com Google</Text>
+        <Text style={styles.loginText}>Enviar</Text>
         </TouchableOpacity>
 
       </View>
@@ -132,5 +119,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20
+  },
+
+  orient: {
+    textAlign: 'center',
+    fontSize: 17,
+    marginTop: 10,
+    marginBottom: 10,
   }
 });

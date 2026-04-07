@@ -1,6 +1,21 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Pressable } from 'react-native';
 import logo from '../assets/images/logo.png';
-export default function App() {
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+export default function ReplacePass() {
+
+  const [userMail, setUserMail] = useState('');
+  const router = useRouter();
+
+  function replacePass() {
+    if (userMail!='') {
+
+    } else {
+      alert("É preciso inserir um e-mail válido para efetuar a redefinição de senha");
+      return;
+    }
+  }
+
   return (
     <View style={styles.container}>
 
@@ -22,10 +37,12 @@ export default function App() {
         <Text style={styles.label}>E-mail</Text>
         <TextInput style={styles.input} />
 
-        <TouchableOpacity style={styles.loginButton}>
+        <Pressable
+        style={styles.loginButton}
+        onPress={replacePass}
+        >
         <Text style={styles.loginText}>Enviar</Text>
-        </TouchableOpacity>
-
+        </Pressable>
       </View>
 
     </View>

@@ -8,7 +8,6 @@ export default function Perfil() {
 
       <ScrollView>
 
-        {/* HEADER */}
         <View style={styles.headerContainer}>
   
         <Text style={styles.header}>Urban Book</Text>
@@ -24,8 +23,11 @@ export default function Perfil() {
           <Image 
             source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
             style={styles.avatar}
+            
           />
           <Text style={styles.name}>João Victor Minelli</Text>
+          <Text style={styles.editP}>Editar</Text>
+          
         </View>
 
         <Text style={styles.section}>Avaliações</Text>
@@ -201,5 +203,10 @@ topIcon: {
   height: 50,
   resizeMode: 'contain',
   backgroundColor: 'transparent'
+},
+
+editP: {
+  marginTop: 5,
+  color: 'gray'
 }
 });

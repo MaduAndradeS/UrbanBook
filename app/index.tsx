@@ -37,7 +37,7 @@ export default function App() {
             <Text style={styles.registerText}>Cadastre-se</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.googleButton}>
+          <TouchableOpacity style={styles.googleButton} onPress={() => router.push('/homepage')}>
             <Text>Continuar com Google</Text>
           </TouchableOpacity>
 

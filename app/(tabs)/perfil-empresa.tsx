@@ -110,22 +110,18 @@ export default function PerfilEmpresaScreen() {
         ))}
 
         <View style={{ height: 110 }} />
-      </ScrollView>
 
-      {/* Botão fixo */}
-      <View style={s.footer}>
+        <View style={s.footer}>
         <TouchableOpacity style={s.agendarBtn}>
           <Text style={s.agendarText}>Agendar serviço</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
 
-      {/* Tab Bar */}
-      <View style={s.tabBar}>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>🏠</Text></TouchableOpacity>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>🔍</Text></TouchableOpacity>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>📅</Text></TouchableOpacity>
-        <TouchableOpacity style={[s.tabItem]}><Text style={s.tabIcon}>👤</Text></TouchableOpacity>
-      </View>
+      {/* Botão fixo */}
+      
+
+    
     </SafeAreaView>
   );
 }
@@ -200,7 +196,7 @@ const s = StyleSheet.create({
   avaliacaoTexto: { fontSize: 12, color: '#555' },
 
   footer: {
-    position: 'absolute', bottom: 64, left: 0, right: 0,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 20, paddingVertical: 10,
     backgroundColor: '#fff',
   },

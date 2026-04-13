@@ -18,15 +18,6 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-<<<<<<< HEAD
-      <Stack
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#ffffff',
-          },
-          headerTintColor: '#000000',
-          headerTitle: '', 
-=======
       
       <Stack
         screenOptions={{
@@ -53,7 +44,6 @@ export default function RootLayout() {
 
             </View>
           ),
->>>>>>> 60d26327694799443115d70120573b63d8c31575
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

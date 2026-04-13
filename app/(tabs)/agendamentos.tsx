@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet,
-  SafeAreaView, TouchableOpacity, ActivityIndicator,
-} from 'react-native';
 import Calendar from '@/components/calendar';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView, StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 // ─── TIPOS ────────────────────────────────────────────────────
 type Status = 'confirmado' | 'pendente';
@@ -190,13 +194,6 @@ export default function AgendamentosScreen() {
         <View style={{ height: 30 }} />
       </ScrollView>
 
-      {/* Tab Bar */}
-      <View style={s.tabBar}>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>🏠</Text></TouchableOpacity>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>🔍</Text></TouchableOpacity>
-        <TouchableOpacity style={[s.tabItem, s.tabActive]}><Text style={s.tabIcon}>📅</Text></TouchableOpacity>
-        <TouchableOpacity style={s.tabItem}><Text style={s.tabIcon}>👤</Text></TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }

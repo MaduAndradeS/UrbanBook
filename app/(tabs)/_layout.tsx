@@ -1,4 +1,5 @@
 import { HapticTab } from '@/components/haptic-tab';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 
@@ -12,62 +13,45 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: '#67C5C0',
-          borderTopWidth: 0,
-          height: 64,
-          paddingBottom: 4,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-        },
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',
-      }}>
+          tabBarActiveTintColor: '#ffffff', 
+          tabBarInactiveTintColor: '#000000', 
+          headerShown: false,
+          tabBarButton: HapticTab,
+          
+      tabBarIconStyle: {
+        marginTop: 20,
+        alignSelf: 'center'
+      },
 
-      <Tabs.Screen
-        name="index"
+      tabBarStyle: {
+        backgroundColor: '#67C5C0',
+        height: 80,
+      
+
+        borderTopWidth: 0, 
+        elevation: 0,        
+        shadowColor: 'transparent' 
+      },
+    
+
+    }}>
+     <Tabs.Screen
+        name="homepage"
         options={{
-          title: 'Início',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          title: '',
+          tabBarIcon: ({ color }) => <IconSymbol size={32} name="house.fill" color={color} />,
         }}
       />
-
-      <Tabs.Screen
-        name="agendamentos"
+     <Tabs.Screen
+        name="pagduda"
         options={{
-          title: 'Agenda',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="atendimentos"
-        options={{
-          title: 'Atend.',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="perfil-empresa"
-        options={{
-          title: 'Empresa',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏢" focused={focused} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="perfil-usuario"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
-        }}
-      />
-
+          title: '',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={32} name="magnifyingglass" color={color} />
+        ),
+      }}
+     />
     </Tabs>
   );
 }
+

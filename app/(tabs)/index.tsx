@@ -1,5 +1,6 @@
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import logo from 'C:/Users/aless/OneDrive/Área de Trabalho/UrbanBook/assets/images/logo.png';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import logo from '../../assets/images/logo.png';
+import { router } from 'expo-router';
 export default function App() {
   return (
     <View style={styles.container}>
@@ -22,7 +23,9 @@ export default function App() {
         <Text style={styles.label}>Senha</Text>
         <TextInput style={styles.input} secureTextEntry />
 
+        <TouchableOpacity onPress={() => router.push('/RecSenha')}>
         <Text style={styles.forgot}>Esqueceu a senha?</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.loginButton}>
           <Text style={styles.loginText}>Login</Text>

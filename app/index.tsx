@@ -27,7 +27,9 @@ export default function App() {
           <Text style={styles.label}>Senha</Text>
           <TextInput style={styles.input} secureTextEntry />
 
+          <TouchableOpacity onPress={() => router.push('/RecSenha')}>
           <Text style={styles.forgot}>Esqueceu a senha?</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.loginButton}>
             <Text style={styles.loginText}>Login</Text>

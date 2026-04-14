@@ -24,7 +24,7 @@ const dados = [
   {
     id: '1',
     nome: 'Luiz Serviços Gerais',
-    rota: '/pagduda',
+    rota: '/perfil-empresa-cliente',
     categorias: ['Encanador', 'Eletricista', 'Marceneiro'],
     endereco: 'Rua Moacir Cavallo, 510 - Centro, Campinas SP',
     imgPerfil: require('../../assets/images/eletricista1.png'),
@@ -94,8 +94,8 @@ export default function HomeCliente() {
             <TouchableOpacity
               key={item.id}
               style={styles.card}
-              /* AQUI CONFIGURA A ROTA, nao entendi se a pagina do pedro tem q ser dinamica com o banco de dados, acho q sim
-              onPress={() => router.push(item.rota)}*/
+              /* AQUI CONFIGURA A ROTA, nao entendi se a pagina do pedro tem q ser dinamica com o banco de dados, acho q sim*/
+              onPress={() => router.push(item.rota as Href)}
             >
               <View style={styles.cardTop}>
                 <Image source={item.imgPerfil} style={styles.imgPerfil} />
@@ -122,7 +122,7 @@ export default function HomeCliente() {
               </View>
 
               <Text style={styles.endereco}>{item.endereco}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity >
           ))}
         </View>
       </ScrollView>

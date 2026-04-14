@@ -1,7 +1,9 @@
+import { useRouter } from 'expo-router';
 import {
   Image,
   SafeAreaView,
-  ScrollView, StyleSheet,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -35,7 +37,9 @@ function Stars({ count, size = 16 }: { count: number; size?: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(i => (
-        <Text key={i} style={{ fontSize: size, color: i <= count ? '#FFB800' : '#ddd' }}>★</Text>
+        <Text key={i} style={{ fontSize: size, color: i <= count ? '#FFB800' : '#ddd' }}>
+          ★
+        </Text>
       ))}
     </View>
   );
@@ -43,6 +47,7 @@ function Stars({ count, size = 16 }: { count: number; size?: number }) {
 
 export default function PerfilEmpresaScreen() {
   const empresa = MOCK_EMPRESA;
+  const router = useRouter();
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -51,11 +56,13 @@ export default function PerfilEmpresaScreen() {
         {/* Header */}
         <View style={s.topHeader}>
           <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}><Text style={s.iconBtnText}>📋</Text></View>
+          <View style={s.iconBtn}>
+            <Text style={s.iconBtnText}>📋</Text>
+          </View>
         </View>
 
         {/* Voltar */}
-        <TouchableOpacity style={s.backBtn}>
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
           <Text style={s.backText}>‹</Text>
         </TouchableOpacity>
 
@@ -64,7 +71,9 @@ export default function PerfilEmpresaScreen() {
           <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
           <View style={s.mainInfoText}>
             <Text style={s.empresaNome}>{empresa.nome}</Text>
-            <Text style={s.telefone}>{empresa.telefone1}    {empresa.telefone2}</Text>
+            <Text style={s.telefone}>
+              {empresa.telefone1}    {empresa.telefone2}
+            </Text>
             <Text style={s.endereco}>{empresa.endereco}</Text>
             <Stars count={empresa.estrelas} />
           </View>
@@ -109,36 +118,43 @@ export default function PerfilEmpresaScreen() {
           </View>
         ))}
 
+        {/* Espaço para não esconder conteúdo atrás do botão */}
         <View style={{ height: 110 }} />
-
-        <View style={s.footer}>
-        <TouchableOpacity style={s.agendarBtn}>
-          <Text style={s.agendarText}>Agendar serviço</Text>
-        </TouchableOpacity>
-      </View>
       </ScrollView>
 
       {/* Botão fixo */}
-      
-
-    
+      <View style={s.footer}>
+        <TouchableOpacity
+          style={s.agendarBtn}
+          onPress={() => router.push('/Emp_Dispo')}
+        >
+          <Text style={s.agendarText}>Disponibilizar horários</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  scroll:   { flex: 1, paddingHorizontal: 20 },
+  scroll: { flex: 1, paddingHorizontal: 20 },
 
   topHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 16, marginBottom: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 4,
   },
   brandName: { fontSize: 20, color: '#999', fontWeight: '400' },
   iconBtn: {
-    width: 36, height: 36, borderRadius: 8,
-    borderWidth: 1, borderColor: '#ddd',
-    alignItems: 'center', justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconBtnText: { fontSize: 18 },
 
@@ -146,70 +162,94 @@ const s = StyleSheet.create({
   backText: { fontSize: 28, color: '#444', lineHeight: 32 },
 
   mainInfo: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 14, marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 20,
   },
   logoImg: {
-    width: 80, height: 80, borderRadius: 40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#f0f0f0',
   },
   mainInfoText: { flex: 1, gap: 3 },
-  empresaNome:  { fontSize: 17, fontWeight: 'bold', color: '#111' },
-  telefone:     { fontSize: 11, color: '#555' },
-  endereco:     { fontSize: 11, color: '#555', marginBottom: 4 },
+  empresaNome: { fontSize: 17, fontWeight: 'bold', color: '#111' },
+  telefone: { fontSize: 11, color: '#555' },
+  endereco: { fontSize: 11, color: '#555', marginBottom: 4 },
 
-  label: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 6, marginTop: 4 },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 6,
+    marginTop: 4,
+  },
 
   box: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 12, marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
   },
   boxText: { fontSize: 13, color: '#333' },
 
   tagsBox: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 12, marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
   },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
-    backgroundColor: '#67C5C0', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 4,
+    backgroundColor: '#67C5C0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   tagText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 
   fotosScroll: { marginBottom: 16 },
   foto: {
-    width: 260, height: 180, borderRadius: 12,
-    marginRight: 12, backgroundColor: '#eee',
+    width: 260,
+    height: 180,
+    borderRadius: 12,
+    marginRight: 12,
+    backgroundColor: '#eee',
   },
 
   avaliacaoCard: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 12, marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 14,
   },
   avaliacaoAvatar: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#eee',
   },
-  avaliacaoInfo:  { flex: 1, gap: 2 },
-  avaliacaoNome:  { fontSize: 14, fontWeight: '700', color: '#111' },
+  avaliacaoInfo: { flex: 1, gap: 2 },
+  avaliacaoNome: { fontSize: 14, fontWeight: '700', color: '#111' },
   avaliacaoTexto: { fontSize: 12, color: '#555' },
 
   footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingVertical: 10,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: '#fff',
   },
   agendarBtn: {
-    backgroundColor: '#67C5C0', borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#67C5C0',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   agendarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-
-  tabBar: {
-    flexDirection: 'row', height: 64,
-    backgroundColor: '#67C5C0', alignItems: 'center', paddingBottom: 4,
-  },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  tabIcon: { fontSize: 22 },
 });

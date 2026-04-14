@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet,
-  SafeAreaView, TouchableOpacity, ActivityIndicator,
-  Modal, Pressable,
-} from 'react-native';
 import Calendar from '@/components/calendar';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal, Pressable,
+  SafeAreaView,
+  ScrollView, StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 // ─── TIPOS ────────────────────────────────────────────────────
 type Status = 'confirmado' | 'pendente';
@@ -164,29 +168,22 @@ export default function AtendimentosScreen() {
       </Modal>
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+      
 
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.headerIcons}>
+        <View style={s.headerRow}>
 
-            {/* Sininho */}
-            <TouchableOpacity style={s.iconBtn} onPress={() => setNotifVisible(true)}>
-              <Text style={s.iconBtnText}>🔔</Text>
-              {naoLidas > 0 && (
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>{naoLidas}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={s.iconBtn}>
-              <Text style={s.iconBtnText}>📋</Text>
-            </TouchableOpacity>
-          </View>
+          {/* TÍTULO */}
+          <Text style={s.pageTitle}>Meus Atendimentos</Text>
+          {/* SININHO (esquerda) */}
+          <TouchableOpacity style={s.iconBtn} onPress={() => setNotifVisible(true)}>
+            <Text style={s.iconBtnText}>🔔</Text>
+            {naoLidas > 0 && (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{naoLidas}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
-
-        <Text style={s.pageTitle}>Meus Atendimentos</Text>
 
         {/* Calendário */}
         <View style={s.calendarCard}>
@@ -252,6 +249,11 @@ const s = StyleSheet.create({
   },
   iconBtnText: { fontSize: 18 },
 
+  headerRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
   // Badge vermelho no sininho
   badge: {
     position: 'absolute', top: -5, right: -5,
@@ -264,7 +266,7 @@ const s = StyleSheet.create({
 
   pageTitle: {
     fontSize: 26, fontWeight: 'bold', color: '#111',
-    marginTop: 10, marginBottom: 18,
+    marginTop: 10, marginBottom: 18, marginRight:50
   },
 
   calendarCard: {

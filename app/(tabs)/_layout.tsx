@@ -43,11 +43,29 @@ export default function TabLayout() {
         }}
       />
      <Tabs.Screen
-        name="pagduda"
+        name="pesquisa_cliente"
         options={{
           title: '',
           tabBarIcon: ({ color }) => (
             <IconSymbol size={32} name="magnifyingglass" color={color} />
+        ),
+      }}
+     />
+     <Tabs.Screen
+        name="agendamentos"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={32} name="calendar" color={color} />
+        ),
+      }}
+     />
+     <Tabs.Screen
+        name="perfil-usuario"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={32} name="person.circle" color={color} />
         ),
       }}
      />

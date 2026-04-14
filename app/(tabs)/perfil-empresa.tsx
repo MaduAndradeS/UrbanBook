@@ -48,17 +48,6 @@ export default function PerfilEmpresaScreen() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}><Text style={s.iconBtnText}>📋</Text></View>
-        </View>
-
-        {/* Voltar */}
-        <TouchableOpacity style={s.backBtn}>
-          <Text style={s.backText}>‹</Text>
-        </TouchableOpacity>
-
         {/* Info principal */}
         <View style={s.mainInfo}>
           <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
@@ -130,10 +119,6 @@ const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scroll:   { flex: 1, paddingHorizontal: 20 },
 
-  topHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 16, marginBottom: 4,
-  },
   brandName: { fontSize: 20, color: '#999', fontWeight: '400' },
   iconBtn: {
     width: 36, height: 36, borderRadius: 8,

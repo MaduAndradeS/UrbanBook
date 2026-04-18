@@ -1,6 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Dimensions, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react'; // Adicionado useState e useEffect
+import {
+  ActivityIndicator // Adicionado ActivityIndicator
+  ,
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const largura = Dimensions.get('window').width;
 const CARD_WIDTH = (largura - 30) / 2;

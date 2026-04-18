@@ -67,29 +67,30 @@ export default function App() {
   }
 
   function validarCadastro() {
-    if (
-      !nome.trim() ||
-      !cnpj.trim() ||
-      !email.trim() ||
-      !senha.trim() ||
-      !cep.trim() ||
-      !numero.trim() ||
-      !rua.trim() ||
-      !bairro.trim() ||
-      !cidade.trim() ||
-      !uf.trim()
-    ) {
-      Alert.alert('Atenção', 'Preencha todos os campos.');
-      return;
-    }
-
-    if (selectedServices.length === 0) {
-      Alert.alert('Atenção', 'Selecione pelo menos um serviço.');
-      return;
-    }
-
-    Alert.alert('Sucesso', 'Cadastro validado com sucesso!');
+  if (
+    !nome.trim() ||
+    !cnpj.trim() ||
+    !email.trim() ||
+    !senha.trim() ||
+    !cep.trim() ||
+    !numero.trim() ||
+    !rua.trim() ||
+    !bairro.trim() ||
+    !cidade.trim() ||
+    !uf.trim()
+  ) {
+    Alert.alert('Atenção', 'Preencha todos os campos.');
+    return;
   }
+
+  if (selectedServices.length === 0) {
+    Alert.alert('Atenção', 'Selecione pelo menos um serviço.');
+    return;
+  }
+
+  Alert.alert('Sucesso', 'Cadastro validado com sucesso!');
+  router.replace('/EsperaAprov');
+}
 
   return (
     <>

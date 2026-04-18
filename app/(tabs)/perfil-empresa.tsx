@@ -53,19 +53,6 @@ export default function PerfilEmpresaScreen() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}>
-            <Text style={s.iconBtnText}>📋</Text>
-          </View>
-        </View>
-
-        {/* Voltar */}
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Text style={s.backText}>‹</Text>
-        </TouchableOpacity>
-
         {/* Info principal */}
         <View style={s.mainInfo}>
           <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />

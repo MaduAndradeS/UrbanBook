@@ -9,7 +9,6 @@ import {
   View
 } from 'react-native';
 
-import logo from '../../assets/images/logo.png';
 type CardItem = {
   id: string;
   nome: string;
@@ -20,7 +19,7 @@ type CardItem = {
   imgCapa: any;
 };
 
-const dados = [
+const dados: CardItem[] = [
   {
     id: '1',
     nome: 'Luiz Serviços Gerais',
@@ -33,7 +32,7 @@ const dados = [
   {
     id: '2',
     nome: 'Espaço Julia Martins',
-    rota: '/pagduda',
+    rota: '/perfil-empresa-cliente',
     categorias: ['Cabeleireira', 'Manicure', 'Depilação', 'Design'],
     endereco: 'Rua Sacramento, 935 - Centro, Campinas SP',
     imgPerfil: require('../../assets/images/cabeleireiro1.png'),
@@ -42,7 +41,7 @@ const dados = [
   {
     id: '3',
     nome: 'Barbearia Arquimedes',
-    rota: '/pagduda',
+    rota: '/perfil-empresa-cliente',
     categorias: ['Barbeiro', 'Cabeleireiro'],
     endereco: 'Rua Fernando Garna, 29 - Taquaral, Campinas SP',
     imgPerfil: require('../../assets/images/barbeiro1.png'),
@@ -51,7 +50,7 @@ const dados = [
   {
     id: '4',
     nome: 'Rosana Faxinas',
-    rota: '/pagduda',
+    rota: '/perfil-empresa-cliente',
     categorias: ['Faxina', 'Mudança', 'Pós-Obra'],
     endereco: 'Avenida Jânio Quadros, 328 - Barão Geraldo, Campinas SP',
     imgPerfil: require('../../assets/images/limpeza1.png'),
@@ -60,7 +59,7 @@ const dados = [
   {
     id: '5',
     nome: 'Espaço Podologia EC',
-    rota: '/pagduda',
+    rota: '/perfil-empresa-cliente',
     categorias: ['Podologia', 'Reflexologia', 'Spa dos Pés'],
     endereco: 'R. Mal. Deodoro da Fonseca, 1350 - Vila Nova, Campinas SP',
     imgPerfil: require('../../assets/images/podologia1.png'),
@@ -77,10 +76,6 @@ export default function HomeCliente() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.top}>
-          <Text style={styles.title}>Urban Book</Text>
-          <Image source={logo} style={styles.logo} />
-        </View>
 
         <View style={styles.localizacaoContainer}>
           <View style={styles.localizacao}>
@@ -95,7 +90,7 @@ export default function HomeCliente() {
               key={item.id}
               style={styles.card}
               /* AQUI CONFIGURA A ROTA, nao entendi se a pagina do pedro tem q ser dinamica com o banco de dados, acho q sim*/
-              onPress={() => router.push(item.rota as Href)}
+              onPress={() => router.push(item.rota)}
             >
               <View style={styles.cardTop}>
                 <Image source={item.imgPerfil} style={styles.imgPerfil} />
@@ -149,21 +144,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  logo: {
-    width: 70,
-    height: 70
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#757575'
-  },
-
   localizacaoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -20,
+    marginTop: 0,
     marginBottom: 10
   },
 

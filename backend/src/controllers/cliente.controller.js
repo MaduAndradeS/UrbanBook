@@ -45,9 +45,33 @@ exports.buscarClientePorId = async (req, res) => {
 
 exports.criarCliente = async (req, res) => {
   try {
-    const { nome, cpf, data_nasc, email, senha } = req.body;
+    const {
+      nome,
+      cpf,
+      data_nasc,
+      email,
+      senha,
+      rua,
+      bairro,
+      cidade,
+      estado,
+      cep,
+      telefone
+    } = req.body;
 
-    if (!nome || !cpf || !data_nasc || !email || !senha) {
+    if (
+      !nome ||
+      !cpf ||
+      !data_nasc ||
+      !email ||
+      !senha ||
+      !rua ||
+      !bairro ||
+      !cidade ||
+      !estado ||
+      !cep ||
+      !telefone
+    ) {
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
       });
@@ -57,6 +81,12 @@ exports.criarCliente = async (req, res) => {
 
     return res.status(201).json(removerSenha(novoCliente));
   } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({
+        message: 'CPF ou email já cadastrado'
+      });
+    }
+
     return res.status(500).json({
       message: 'Erro ao criar cliente',
       error: error.message

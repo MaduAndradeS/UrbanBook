@@ -69,12 +69,6 @@ export default function PerfilUsuarioScreen() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}><Text style={s.iconBtnText}>📋</Text></View>
-        </View>
-
         {/* Avatar + Nome */}
         <View style={s.profileHeader}>
           <Image source={{ uri: usuario.foto }} style={s.avatarGrande} />

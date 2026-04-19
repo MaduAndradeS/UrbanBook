@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Dimensions, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import logo from '../../assets/images/logo.png';
 
 const dados = [
   { id: '1', titulo: 'Encanador', img1: require('../../assets/images/encanador1.png'), img2: require('../../assets/images/encanador2.png') },
@@ -32,11 +31,6 @@ export default function PesquisaCliente() {
 
         ListHeaderComponent={
           <View>
-            {/* TOPO */}
-            <View style={styles.top}>
-              <Text style={styles.title}>Urban Book</Text>
-              <Image source={logo} style={styles.logo} />
-            </View>
 
             {/* BARRA DE PESQUISA */}
             <View style={styles.barraPesquisa}>
@@ -97,17 +91,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  logo: {
-    width: 70,
-    height: 70
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#757575'
-  },
-
   barraPesquisa: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -116,7 +99,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 40,
     marginHorizontal: 20,
-    marginTop: -10
+    marginTop: 5
   },
 
   input: {

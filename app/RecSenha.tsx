@@ -1,7 +1,7 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Pressable } from 'react-native';
-import logo from '../assets/images/logo.png';
-import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import logo from '../assets/images/logo.png';
 export default function ReplacePass() {
 
   const [userMail, setUserMail] = useState('');
@@ -21,7 +21,7 @@ export default function ReplacePass() {
 
       <View style={styles.top}>
 
-        <Image source={logo} style={{marginTop: 60, width: 125, height: 125 }} />
+        <Image source={logo} style={styles.logo} />
 
         <Text style={styles.title}>Urban Book</Text>
         <Text style={styles.subtitle}>
@@ -56,30 +56,32 @@ const styles = StyleSheet.create({
   },
 
   top: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20
-  },
-
-  logo: {
-    marginTop: 80,
-    width: 80,
-    height: 80,
-    marginBottom: 10
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingTop: -30, 
+  paddingBottom: 20,              
   },
 
   title: {
     fontSize: 26,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
 
   subtitle: {
     textAlign: 'center',
-    marginTop: 5
+    marginTop: 5,
   },
 
+
+  logo: {
+    marginTop: 0, 
+    marginBottom: 8, 
+    width: 125,
+    height: 125
+  },
+
+  
   bottom: {
     flex: 2,
     backgroundColor: '#67C5C0',

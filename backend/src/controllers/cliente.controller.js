@@ -1,10 +1,19 @@
 const clienteService = require('../services/cliente.service');
 
+const removerSenha = (cliente) => {
+  if (!cliente) return cliente;
+
+  const { SENHA_HASH, ...clienteSemSenha } = cliente;
+  return clienteSemSenha;
+};
+
 exports.listarClientes = async (req, res) => {
   try {
     const clientes = await clienteService.listarClientes();
 
-    return res.status(200).json(clientes);
+    const clientesSemSenha = clientes.map(removerSenha);
+
+    return res.status(200).json(clientesSemSenha);
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao listar clientes',
@@ -25,7 +34,7 @@ exports.buscarClientePorId = async (req, res) => {
       });
     }
 
-    return res.status(200).json(cliente);
+    return res.status(200).json(removerSenha(cliente));
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao buscar cliente',
@@ -46,7 +55,7 @@ exports.criarCliente = async (req, res) => {
 
     const novoCliente = await clienteService.criarCliente(req.body);
 
-    return res.status(201).json(novoCliente);
+    return res.status(201).json(removerSenha(novoCliente));
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao criar cliente',

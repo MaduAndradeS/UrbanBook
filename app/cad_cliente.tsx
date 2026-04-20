@@ -17,14 +17,19 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
+// TROQUE PELO IP DO SEU COMPUTADOR
+const API_BASE_URL = 'http://192.168.1.8:3333/api';
+
 export default function CadCliente() {
   const router = useRouter();
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Cliente');
+  const [carregando, setCarregando] = useState(false);
 
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cep, setCep] = useState('');
   const [numero, setNumero] = useState('');
@@ -32,25 +37,74 @@ export default function CadCliente() {
   const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('');
   const [uf, setUf] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [telefone, setTelefone] = useState('');
 
-  function validarCadastro() {
+  async function validarCadastro() {
     if (
       !nome.trim() ||
       !cpf.trim() ||
       !email.trim() ||
+      !senha.trim() ||
       !dataNascimento.trim() ||
       !cep.trim() ||
       !numero.trim() ||
       !rua.trim() ||
       !bairro.trim() ||
       !cidade.trim() ||
-      !uf.trim()
+      !uf.trim() ||
+      !telefone.trim()
     ) {
-      Alert.alert('Atenção', 'Preencha todos os campos.');
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios.');
       return;
     }
 
-    Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+    try {
+      setCarregando(true);
+
+      const response = await fetch(`${API_BASE_URL}/clientes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          cpf: cpf.trim(),
+          data_nasc: dataNascimento.trim(),
+          email: email.trim(),
+          senha: senha.trim(),
+          rua: rua.trim(),
+          num: Number(numero),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: uf.trim().toUpperCase(),
+          cep: cep.trim(),
+          comp: complemento.trim(),
+          telefone: telefone.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.message || 'Não foi possível cadastrar.');
+        return;
+      }
+
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/'),
+        },
+      ]);
+    } catch (error) {
+      Alert.alert(
+        'Erro',
+        'Não foi possível conectar ao servidor. Verifique se o backend está rodando e se o IP está correto.'
+      );
+    } finally {
+      setCarregando(false);
+    }
   }
 
   return (
@@ -91,6 +145,7 @@ export default function CadCliente() {
             style={styles.input}
             value={cpf}
             onChangeText={setCpf}
+            keyboardType="numeric"
           />
 
           <Text style={styles.label}>E-mail</Text>
@@ -98,6 +153,16 @@ export default function CadCliente() {
             style={styles.input}
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <Text style={styles.label}>Senha</Text>
+          <TextInput
+            style={styles.input}
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
           />
 
           <Text style={styles.label}>Data de nascimento</Text>
@@ -105,6 +170,16 @@ export default function CadCliente() {
             style={styles.input}
             value={dataNascimento}
             onChangeText={setDataNascimento}
+            placeholder="AAAA-MM-DD"
+            placeholderTextColor="#888"
+          />
+
+          <Text style={styles.label}>Telefone</Text>
+          <TextInput
+            style={styles.input}
+            value={telefone}
+            onChangeText={setTelefone}
+            keyboardType="phone-pad"
           />
 
           <Text style={styles.label}>Endereço</Text>
@@ -116,6 +191,7 @@ export default function CadCliente() {
                 style={styles.inputSmall}
                 value={cep}
                 onChangeText={setCep}
+                keyboardType="numeric"
               />
             </View>
 
@@ -125,6 +201,7 @@ export default function CadCliente() {
                 style={styles.inputSmall}
                 value={numero}
                 onChangeText={setNumero}
+                keyboardType="numeric"
               />
             </View>
           </View>
@@ -159,12 +236,27 @@ export default function CadCliente() {
                 style={styles.inputUf}
                 value={uf}
                 onChangeText={setUf}
+                maxLength={2}
+                autoCapitalize="characters"
               />
             </View>
           </View>
 
-          <TouchableOpacity style={styles.loginButton} onPress={validarCadastro}>
-            <Text style={styles.loginText}>Cadastrar</Text>
+          <Text style={styles.label}>Complemento</Text>
+          <TextInput
+            style={styles.input}
+            value={complemento}
+            onChangeText={setComplemento}
+          />
+
+          <TouchableOpacity
+            style={[styles.loginButton, carregando && styles.loginButtonDisabled]}
+            onPress={validarCadastro}
+            disabled={carregando}
+          >
+            <Text style={styles.loginText}>
+              {carregando ? 'Cadastrando...' : 'Cadastrar'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -232,11 +324,11 @@ const styles = StyleSheet.create({
   },
 
   top: {
-  flex: 1,
-  alignItems: 'center',
-  justifyContent: 'flex-start', 
-  paddingTop: 10, 
-  paddingBottom: 20,              
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 10,
+    paddingBottom: 20,
   },
 
   title: {
@@ -337,6 +429,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
+  },
+
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
 
   loginText: {

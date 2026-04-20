@@ -7,6 +7,11 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
+    "android": {
+      "usesCleartextTraffic": true
+    },
+
     "ios": {
       "supportsTablet": true
     },
@@ -14,6 +19,7 @@
     "web": {
       "output": "static"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -28,6 +34,7 @@
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

@@ -1,13 +1,41 @@
 const authService = require('../services/auth.service');
 
-exports.register = async (req, res) => {
+exports.login = async (req, res) => {
   try {
-    const result = await authService.register(req.body);
+    const { email, senha } = req.body;
 
-    return res.status(201).json(result);
+    // 🔴 Validação
+    if (!email || !senha) {
+      return res.status(400).json({
+        message: 'Email e senha são obrigatórios'
+      });
+    }
+
+    // 🔐 Chama o service
+    const resultado = await authService.login(email, senha);
+
+    // ✅ Sucesso
+    return res.status(200).json({
+      message: 'Login realizado com sucesso',
+      tipo: resultado.tipo,
+      usuario: resultado.usuario
+    });
+
   } catch (error) {
-    return res.status(400).json({
-      message: error.message
+    // ⚠️ Erros esperados
+    if (
+      error.message === 'Usuário não encontrado' ||
+      error.message === 'Senha inválida'
+    ) {
+      return res.status(401).json({
+        message: error.message
+      });
+    }
+
+    // 💥 Erro inesperado
+    return res.status(500).json({
+      message: 'Erro ao realizar login',
+      error: error.message
     });
   }
 };

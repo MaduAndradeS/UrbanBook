@@ -52,13 +52,9 @@ export default function PerfilEmpresaScreen() {
   return (
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+        
+        <View style={{ height: 20 }} />
 
-        {/* Voltar */}
-        <TouchableOpacity style={s.backBtn}>
-          <Text style={s.backText}>‹</Text>
-        </TouchableOpacity>
-
-        {/* Info principal */}
         <View style={s.mainInfo}>
           <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
           <View style={s.mainInfoText}>
@@ -71,13 +67,11 @@ export default function PerfilEmpresaScreen() {
           </View>
         </View>
 
-        {/* Descrição */}
         <Text style={s.label}>Descrição</Text>
         <View style={s.box}>
           <Text style={s.boxText}>{empresa.descricao}</Text>
         </View>
 
-        {/* Tags */}
         <Text style={s.label}>Tags</Text>
         <View style={s.tagsBox}>
           <View style={s.tagsRow}>
@@ -89,7 +83,6 @@ export default function PerfilEmpresaScreen() {
           </View>
         </View>
 
-        {/* Fotos */}
         <Text style={s.label}>Fotos</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.fotosScroll}>
           {empresa.fotos.map((uri, idx) => (
@@ -97,7 +90,6 @@ export default function PerfilEmpresaScreen() {
           ))}
         </ScrollView>
 
-        {/* Avaliações */}
         <Text style={s.label}>Avaliações</Text>
         {empresa.avaliacoes.map(av => (
           <View key={av.id} style={s.avaliacaoCard}>
@@ -110,19 +102,18 @@ export default function PerfilEmpresaScreen() {
           </View>
         ))}
 
-        {/* Espaço para não esconder conteúdo atrás do botão */}
-        <View style={{ height: 110 }} />
-      </ScrollView>
+        <View style={s.btnContainer}>
+          <TouchableOpacity
+            style={s.agendarBtn}
+            onPress={() => router.push('/Cliente_Datas')}
+          >
+            <Text style={s.agendarText}>Agendar serviço</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Botão fixo */}
-      <View style={s.footer}>
-        <TouchableOpacity
-          style={s.agendarBtn}
-          onPress={() => router.push('/Cliente_Datas')}
-        >
-          <Text style={s.agendarText}>Agendar serviço</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Espaço final para respiro da rolagem */}
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -130,9 +121,6 @@ export default function PerfilEmpresaScreen() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scroll: { flex: 1, paddingHorizontal: 20 },
-
-  backBtn: { marginBottom: 12 },
-  backText: { fontSize: 28, color: '#444', lineHeight: 32 },
 
   mainInfo: {
     flexDirection: 'row',
@@ -209,14 +197,10 @@ const s = StyleSheet.create({
   avaliacaoNome: { fontSize: 14, fontWeight: '700', color: '#111' },
   avaliacaoTexto: { fontSize: 12, color: '#555' },
 
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+  btnContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+    width: '100%',
   },
   agendarBtn: {
     backgroundColor: '#67C5C0',

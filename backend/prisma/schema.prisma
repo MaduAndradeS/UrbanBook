@@ -29,6 +29,7 @@ model AGENDAMENTO {
 model CLIENTE {
   ID_CLIENTE    Int           @id @default(autoincrement())
   NOME          String        @db.VarChar(100)
+  FOTO_PERFIL   String?       @db.VarChar(255)
   CPF           String        @unique(map: "CPF") @db.Char(11)
   DATA_NASC     DateTime      @db.Date
   EMAIL         String        @unique(map: "EMAIL") @db.VarChar(100)
@@ -45,6 +46,8 @@ model CLIENTE {
 model EMPRESARIO {
   ID_EMPRESARIO Int           @id @default(autoincrement())
   NOME          String        @db.VarChar(100)
+  FOTO_PERFIL   String?       @db.VarChar(255)
+  FOTOS_TRABALHO FOTO_TRABALHO[]
   CNPJ          String        @unique(map: "CNPJ") @db.Char(14)
   BIO           String?       @db.VarChar(200)
   EMAIL         String        @unique(map: "EMAIL") @db.VarChar(100)
@@ -56,6 +59,7 @@ model EMPRESARIO {
   ENDERECO      ENDERECO[]
   SERVICOS      SERVICOS[]
   TELEFONE      TELEFONE[]
+  DISPONIBILIDADE DISPONIBILIDADE[]
 
   @@index([ID_ADM], map: "ID_ADM")
 }
@@ -97,4 +101,41 @@ model TELEFONE {
 
   @@index([ID_CLIENTE], map: "ID_CLIENTE")
   @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model DISPONIBILIDADE {
+  ID_DISP         Int         @id @default(autoincrement())
+  ID_EMPRESARIO   Int
+  DATA            DateTime    @db.Date
+  HORA_ABERTURA   String      @db.VarChar(5)
+  HORA_FECHAMENTO String      @db.VarChar(5)
+  DURACAO_MIN     Int         @default(30)
+
+  EMPRESARIO      EMPRESARIO  @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade)
+  BLOQUEIOS       BLOQUEIO_DISPONIBILIDADE[]
+
+  @@index([ID_EMPRESARIO])
+  @@unique([ID_EMPRESARIO, DATA])
+}
+
+model BLOQUEIO_DISPONIBILIDADE {
+  ID_BLOQUEIO      Int             @id @default(autoincrement())
+  ID_DISP          Int
+  HORA_INICIO      String?         @db.VarChar(5)
+  HORA_FIM         String?         @db.VarChar(5)
+  DIA_INDISPONIVEL Boolean         @default(false)
+  MOTIVO           String?         @db.VarChar(100)
+
+  DISPONIBILIDADE  DISPONIBILIDADE @relation(fields: [ID_DISP], references: [ID_DISP], onDelete: Cascade)
+
+  @@index([ID_DISP])
+}
+
+model FOTO_TRABALHO {
+  ID_FOTO       Int        @id @default(autoincrement())
+  URL           String     @db.VarChar(255)
+  ID_EMPRESARIO Int
+  EMPRESARIO    EMPRESARIO @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade)
+
+  @@index([ID_EMPRESARIO])
 }

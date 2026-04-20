@@ -1,4 +1,10 @@
 const clienteService = require('../services/cliente.service');
+const {
+  limparNumeros,
+  validarCPF,
+  validarCEP,
+  validarTelefone
+} = require('../utils/validacoes');
 
 const removerSenha = (cliente) => {
   if (!cliente) return cliente;
@@ -10,10 +16,7 @@ const removerSenha = (cliente) => {
 exports.listarClientes = async (req, res) => {
   try {
     const clientes = await clienteService.listarClientes();
-
-    const clientesSemSenha = clientes.map(removerSenha);
-
-    return res.status(200).json(clientesSemSenha);
+    return res.status(200).json(clientes.map(removerSenha));
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao listar clientes',
@@ -25,7 +28,6 @@ exports.listarClientes = async (req, res) => {
 exports.buscarClientePorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
-
     const cliente = await clienteService.buscarClientePorId(id);
 
     if (!cliente) {
@@ -77,7 +79,32 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
-    const novoCliente = await clienteService.criarCliente(req.body);
+    if (!validarCPF(cpf)) {
+      return res.status(400).json({
+        message: 'CPF inválido'
+      });
+    }
+
+    if (!validarCEP(cep)) {
+      return res.status(400).json({
+        message: 'CEP inválido'
+      });
+    }
+
+    if (!validarTelefone(telefone)) {
+      return res.status(400).json({
+        message: 'Telefone inválido'
+      });
+    }
+
+    const bodyTratado = {
+      ...req.body,
+      cpf: limparNumeros(cpf),
+      cep: limparNumeros(cep),
+      telefone: limparNumeros(telefone)
+    };
+
+    const novoCliente = await clienteService.criarCliente(bodyTratado);
 
     return res.status(201).json(removerSenha(novoCliente));
   } catch (error) {

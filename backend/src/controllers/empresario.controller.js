@@ -1,4 +1,10 @@
 const empresarioService = require('../services/empresario.service');
+const {
+  limparNumeros,
+  validarCNPJ,
+  validarCEP,
+  validarTelefone
+} = require('../utils/validacoes');
 
 const removerSenha = (empresario) => {
   if (!empresario) return empresario;
@@ -10,10 +16,7 @@ const removerSenha = (empresario) => {
 exports.listarEmpresarios = async (req, res) => {
   try {
     const empresarios = await empresarioService.listarEmpresarios();
-
-    const empresariosSemSenha = empresarios.map(removerSenha);
-
-    return res.status(200).json(empresariosSemSenha);
+    return res.status(200).json(empresarios.map(removerSenha));
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao listar empresários',
@@ -25,10 +28,7 @@ exports.listarEmpresarios = async (req, res) => {
 exports.listarEmpresariosPendentes = async (req, res) => {
   try {
     const empresarios = await empresarioService.listarEmpresariosPendentes();
-
-    const empresariosSemSenha = empresarios.map(removerSenha);
-
-    return res.status(200).json(empresariosSemSenha);
+    return res.status(200).json(empresarios.map(removerSenha));
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao listar empresários pendentes',
@@ -40,7 +40,6 @@ exports.listarEmpresariosPendentes = async (req, res) => {
 exports.buscarEmpresarioPorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
-
     const empresario = await empresarioService.buscarEmpresarioPorId(id);
 
     if (!empresario) {
@@ -97,7 +96,32 @@ exports.criarEmpresario = async (req, res) => {
       });
     }
 
-    const novoEmpresario = await empresarioService.criarEmpresario(req.body);
+    if (!validarCNPJ(cnpj)) {
+      return res.status(400).json({
+        message: 'CNPJ inválido'
+      });
+    }
+
+    if (!validarCEP(cep)) {
+      return res.status(400).json({
+        message: 'CEP inválido'
+      });
+    }
+
+    if (!validarTelefone(telefone)) {
+      return res.status(400).json({
+        message: 'Telefone inválido'
+      });
+    }
+
+    const bodyTratado = {
+      ...req.body,
+      cnpj: limparNumeros(cnpj),
+      cep: limparNumeros(cep),
+      telefone: limparNumeros(telefone)
+    };
+
+    const novoEmpresario = await empresarioService.criarEmpresario(bodyTratado);
 
     return res.status(201).json(removerSenha(novoEmpresario));
   } catch (error) {

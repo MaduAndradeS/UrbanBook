@@ -53,7 +53,6 @@ exports.criarCliente = async (data) => {
     }
   });
 
-  // 📍 Endereço
   await prisma.eNDERECO.create({
     data: {
       ID_CLIENTE: novoCliente.ID_CLIENTE,
@@ -67,7 +66,6 @@ exports.criarCliente = async (data) => {
     }
   });
 
-  // 📞 Telefone
   await prisma.tELEFONE.create({
     data: {
       ID_CLIENTE: novoCliente.ID_CLIENTE,
@@ -75,7 +73,6 @@ exports.criarCliente = async (data) => {
     }
   });
 
-  // 🔁 Retorna completo
   return await prisma.cLIENTE.findUnique({
     where: {
       ID_CLIENTE: novoCliente.ID_CLIENTE

@@ -42,6 +42,18 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
   });
 };
 
+exports.listarEmpresariosPendentes = async () => {
+  return await prisma.eMPRESARIO.findMany({
+    where: {
+      ID_ADM: null
+    },
+    include: {
+      ENDERECO: true,
+      TELEFONE: true,
+      SERVICOS: true
+    }
+  });
+};
 
 exports.buscarEmpresarioPorId = async (id) => {
   return await prisma.eMPRESARIO.findUnique({
@@ -112,7 +124,6 @@ exports.criarEmpresario = async (data) => {
     }
   });
 };
-
 
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({

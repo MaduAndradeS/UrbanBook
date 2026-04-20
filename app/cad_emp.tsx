@@ -17,6 +17,72 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
+const API_BASE_URL = 'http://192.168.1.8:3333/api';
+
+const categoriasServicos: Record<string, string[]> = {
+  Beleza: [
+    'Cabeleireiro',
+    'Depilação',
+    'Designer',
+    'Barbeiro',
+    'Manicure',
+    'Pedicure',
+    'Podólogo',
+    'Massagem',
+    'Maquiador',
+    'Esteticista',
+  ],
+  'Serviços Gerais': [
+    'Diarista',
+    'Faxineira',
+    'Cozinheira',
+    'Limpeza pós reforma',
+    'Limpeza pré/pós mudança',
+    'Passadeira',
+    'Babá',
+  ],
+  'Manutenção Residencial': [
+    'Eletricista',
+    'Encanador',
+    'Pintor',
+    'Pedreiro',
+    'Marceneiro',
+    'Vidraceiro',
+    'Chaveiro',
+    'Jardineiro',
+  ],
+  Automotivo: [
+    'Mecânico',
+    'Lava rápido',
+    'Funilaria',
+    'Elétrica automotiva',
+  ],
+  Tecnologia: [
+    'Técnico em informática',
+    'Suporte técnico',
+    'Desenvolvimento de sites',
+  ],
+  Educação: [
+    'Professor particular',
+    'Reforço escolar',
+    'Aulas de idioma',
+  ],
+  'Saúde e Bem-estar': [
+    'Personal trainer',
+    'Massagista',
+    'Enfermeira',
+    'Podóloga',
+    'Fisioterapeuta',
+  ],
+  Eventos: [
+    'Fotógrafo',
+    'DJ',
+    'Decorador',
+    'Cerimonialista',
+    'Buffet',
+  ],
+};
+
 export default function App() {
   const router = useRouter();
 
@@ -24,30 +90,22 @@ export default function App() {
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Prestador');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
 
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
+  const [bio, setBio] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [cep, setCep] = useState('');
   const [numero, setNumero] = useState('');
   const [rua, setRua] = useState('');
   const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('');
   const [uf, setUf] = useState('');
-
-  const services = [
-    'Encanador',
-    'Eletricista',
-    'Marceneiro',
-    'Pintor',
-    'Pedreiro',
-    'Jardineiro',
-    'Diarista',
-    'Chaveiro',
-    'Mecânico',
-    'Vidraceiro',
-  ];
+  const [complemento, setComplemento] = useState('');
 
   function toggleService(service: string) {
     const alreadySelected = selectedServices.includes(service);
@@ -59,38 +117,93 @@ export default function App() {
 
     if (selectedServices.length < 5) {
       setSelectedServices([...selectedServices, service]);
+      return;
     }
+
+    Alert.alert('Atenção', 'Você pode selecionar no máximo 5 serviços.');
   }
 
   function removeService(service: string) {
     setSelectedServices(selectedServices.filter(item => item !== service));
   }
 
-  function validarCadastro() {
-  if (
-    !nome.trim() ||
-    !cnpj.trim() ||
-    !email.trim() ||
-    !senha.trim() ||
-    !cep.trim() ||
-    !numero.trim() ||
-    !rua.trim() ||
-    !bairro.trim() ||
-    !cidade.trim() ||
-    !uf.trim()
-  ) {
-    Alert.alert('Atenção', 'Preencha todos os campos.');
-    return;
-  }
+  async function validarCadastro() {
+    if (
+      !nome.trim() ||
+      !cnpj.trim() ||
+      !email.trim() ||
+      !senha.trim() ||
+      !telefone.trim() ||
+      !cep.trim() ||
+      !numero.trim() ||
+      !rua.trim() ||
+      !bairro.trim() ||
+      !cidade.trim() ||
+      !uf.trim()
+    ) {
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios.');
+      return;
+    }
 
-  if (selectedServices.length === 0) {
-    Alert.alert('Atenção', 'Selecione pelo menos um serviço.');
-    return;
-  }
+    if (selectedServices.length === 0) {
+      Alert.alert('Atenção', 'Selecione pelo menos um serviço.');
+      return;
+    }
 
-  Alert.alert('Sucesso', 'Cadastro validado com sucesso!');
-  router.replace('/EsperaAprov');
-}
+    try {
+      setCarregando(true);
+
+      const body = {
+        nome: nome.trim(),
+        cnpj: cnpj.trim(),
+        bio: bio.trim(),
+        email: email.trim(),
+        senha: senha.trim(),
+        rua: rua.trim(),
+        num: Number(numero),
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        estado: uf.trim().toUpperCase(),
+        cep: cep.trim(),
+        comp: complemento.trim(),
+        telefone: telefone.trim(),
+        servicos: selectedServices,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/empresarios`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.message || 'Não foi possível solicitar cadastro.');
+        return;
+      }
+
+      Alert.alert(
+        'Sucesso',
+        'Solicitação de cadastro enviada com sucesso! Aguarde aprovação.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/EsperaAprov'),
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert(
+        'Erro',
+        'Não foi possível conectar ao servidor. Verifique se o backend está rodando e se o IP está correto.'
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   return (
     <>
@@ -130,6 +243,14 @@ export default function App() {
             style={styles.input}
             value={cnpj}
             onChangeText={setCnpj}
+            keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={styles.input}
+            value={bio}
+            onChangeText={setBio}
           />
 
           <Text style={styles.label}>E-mail</Text>
@@ -149,10 +270,21 @@ export default function App() {
             secureTextEntry
           />
 
+          <Text style={styles.label}>Telefone</Text>
+          <TextInput
+            style={styles.input}
+            value={telefone}
+            onChangeText={setTelefone}
+            keyboardType="phone-pad"
+          />
+
           <Text style={styles.label}>Serviços</Text>
           <TouchableOpacity
             style={styles.inputSelect}
-            onPress={() => setServiceModalVisible(true)}
+            onPress={() => {
+              setCategoriaSelecionada(null);
+              setServiceModalVisible(true);
+            }}
             activeOpacity={0.8}
           >
             <View style={styles.inputSelectContent}>
@@ -239,11 +371,21 @@ export default function App() {
             </View>
           </View>
 
+          <Text style={styles.label}>Complemento</Text>
+          <TextInput
+            style={styles.input}
+            value={complemento}
+            onChangeText={setComplemento}
+          />
+
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, carregando && styles.loginButtonDisabled]}
             onPress={validarCadastro}
+            disabled={carregando}
           >
-            <Text style={styles.loginText}>Solicitar cadastro</Text>
+            <Text style={styles.loginText}>
+              {carregando ? 'Solicitando...' : 'Solicitar cadastro'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -307,44 +449,82 @@ export default function App() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalBox}>
-                <Text style={styles.modalTitle}>Selecione até 5 serviços</Text>
+                {categoriaSelecionada === null ? (
+                  <>
+                    <Text style={styles.modalTitle}>Selecione uma categoria</Text>
 
-                <View style={styles.chipsContainer}>
-                  {services.map((item, index) => {
-                    const isSelected = selectedServices.includes(item);
-
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.chip,
-                          isSelected && styles.chipSelected,
-                        ]}
-                        onPress={() => toggleService(item)}
-                      >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            isSelected && styles.chipTextSelected,
-                          ]}
+                    <View style={styles.categoryContainer}>
+                      {Object.keys(categoriasServicos).map((categoria, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.categoryButton}
+                          onPress={() => setCategoriaSelecionada(categoria)}
                         >
-                          {item}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                          <Text style={styles.categoryButtonText}>{categoria}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
 
-                <Text style={styles.limitText}>
-                  Selecionados: {selectedServices.length}/5
-                </Text>
+                    <Text style={styles.limitText}>
+                      Selecionados: {selectedServices.length}/5
+                    </Text>
 
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setServiceModalVisible(false)}
-                >
-                  <Text style={styles.modalCloseButtonText}>Confirmar</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={() => setServiceModalVisible(false)}
+                    >
+                      <Text style={styles.modalCloseButtonText}>Fechar</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.backButton}
+                      onPress={() => setCategoriaSelecionada(null)}
+                    >
+                      <Text style={styles.backButtonText}>← Voltar para categorias</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.modalTitle}>{categoriaSelecionada}</Text>
+
+                    <View style={styles.chipsContainer}>
+                      {categoriasServicos[categoriaSelecionada].map((item, index) => {
+                        const isSelected = selectedServices.includes(item);
+
+                        return (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.chip,
+                              isSelected && styles.chipSelected,
+                            ]}
+                            onPress={() => toggleService(item)}
+                          >
+                            <Text
+                              style={[
+                                styles.chipText,
+                                isSelected && styles.chipTextSelected,
+                              ]}
+                            >
+                              {item}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    <Text style={styles.limitText}>
+                      Selecionados: {selectedServices.length}/5
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={() => setServiceModalVisible(false)}
+                    >
+                      <Text style={styles.modalCloseButtonText}>Confirmar</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -365,11 +545,11 @@ const styles = StyleSheet.create({
   },
 
   top: {
-  flex: 1,
-  alignItems: 'center',
-  justifyContent: 'flex-start', 
-  paddingTop: 10, 
-  paddingBottom: 20,              
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 10,
+    paddingBottom: 20,
   },
 
   title: {
@@ -451,7 +631,7 @@ const styles = StyleSheet.create({
   },
 
   selectedChip: {
-    backgroundColor: '#6ecff6',
+    backgroundColor: '#67C5C0',
     paddingVertical: 6,
     paddingLeft: 12,
     paddingRight: 8,
@@ -463,7 +643,7 @@ const styles = StyleSheet.create({
   },
 
   selectedChipText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 13,
     marginRight: 6,
   },
@@ -478,7 +658,7 @@ const styles = StyleSheet.create({
   },
 
   removeChipButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 13,
     fontWeight: 'bold',
     lineHeight: 13,
@@ -528,6 +708,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
+
   loginText: {
     color: '#fff',
   },
@@ -545,6 +729,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 15,
     padding: 15,
+    maxHeight: '80%',
   },
 
   typeModalBox: {
@@ -582,6 +767,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
+  categoryContainer: {
+    gap: 8,
+  },
+
+  categoryButton: {
+    backgroundColor: '#BFE7E4',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+
+  categoryButtonText: {
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+  },
+
+  backButton: {
+    marginBottom: 10,
+  },
+
+  backButtonText: {
+    color: '#2ea7db',
+    fontWeight: '600',
+  },
+
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -589,7 +802,7 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: '#6ecff6',
+    backgroundColor: '#BFE7E4',
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
@@ -597,16 +810,16 @@ const styles = StyleSheet.create({
   },
 
   chipSelected: {
-    backgroundColor: '#2ea7db',
+    backgroundColor: '#67C5C0',
   },
 
   chipText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 14,
   },
 
   chipTextSelected: {
-    color: '#fff',
+    color: '#000',
     fontWeight: 'bold',
   },
 

@@ -4,6 +4,7 @@ const router = express.Router();
 const clienteRoutes = require('./cliente.routes');
 const empresarioRoutes = require('./empresario.routes');
 const authRoutes = require('./auth.routes');
+const admRoutes = require('./adm.routes');
 
 router.get('/', (req, res) => {
   res.send('API UrbanBook funcionando');

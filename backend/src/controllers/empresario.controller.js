@@ -12,12 +12,11 @@ const removerSenha = (empresario) => {
   return empresarioSemSenha;
 };
 
-
+// 🔎 LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
 exports.listarEmpresarios = async (req, res) => {
   try {
     const { busca, categoria } = req.query;
 
-    // Ordem: termoBusca, apenasAprovados, categoria
     const empresarios = await empresarioService.listarEmpresarios(
       busca || undefined, 
       true, 
@@ -36,13 +35,10 @@ exports.listarEmpresarios = async (req, res) => {
   }
 };
 
-
+// ⏳ LISTAR EMPRESÁRIOS PENDENTES
 exports.listarEmpresariosPendentes = async (req, res) => {
   try {
-    // Busca todos os não aprovados (apenasAprovados = false)
     const empresarios = await empresarioService.listarEmpresarios(null, false);
-
-    // Filtra apenas onde ID_ADM ainda é nulo
     const pendentes = empresarios.filter(e => e.ID_ADM === null);
 
     return res.status(200).json(pendentes.map(removerSenha));
@@ -54,7 +50,7 @@ exports.listarEmpresariosPendentes = async (req, res) => {
   }
 };
 
-
+// 🎯 BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -78,25 +74,29 @@ exports.buscarEmpresarioPorId = async (req, res) => {
   }
 };
 
-
+// ➕ CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (req, res) => {
   try {
     const {
       nome, cnpj, email, senha, rua, bairro, cidade, estado, cep, telefone, servicos
     } = req.body;
 
+    // 1. Validação de campos obrigatórios
     if (!nome || !cnpj || !email || !senha || !rua || !bairro || !cidade || !estado || !cep || !telefone) {
       return res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
     }
 
+    // 2. Validação de serviços
     if (!Array.isArray(servicos) || servicos.length === 0) {
       return res.status(400).json({ message: 'Selecione pelo menos um serviço' });
     }
 
+    // 3. Validações técnicas
     if (!validarCNPJ(cnpj)) return res.status(400).json({ message: 'CNPJ inválido' });
     if (!validarCEP(cep)) return res.status(400).json({ message: 'CEP inválido' });
     if (!validarTelefone(telefone)) return res.status(400).json({ message: 'Telefone inválido' });
 
+    // 4. Tratamento de dados (Limpeza de máscaras)
     const bodyTratado = {
       ...req.body,
       cnpj: limparNumeros(cnpj),
@@ -118,7 +118,7 @@ exports.criarEmpresario = async (req, res) => {
   }
 };
 
-
+// ✅ APROVAR EMPRESÁRIO (ADM)
 exports.aprovarEmpresario = async (req, res) => {
   try {
     const idEmpresario = Number(req.params.id);

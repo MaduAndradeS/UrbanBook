@@ -4,25 +4,20 @@ exports.login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    // 🔴 Validação
     if (!email || !senha) {
       return res.status(400).json({
         message: 'Email e senha são obrigatórios'
       });
     }
 
-    // 🔐 Chama o service
     const resultado = await authService.login(email, senha);
 
-    // ✅ Sucesso
     return res.status(200).json({
       message: 'Login realizado com sucesso',
       tipo: resultado.tipo,
       usuario: resultado.usuario
     });
-
   } catch (error) {
-    // ⚠️ Erros esperados
     if (
       error.message === 'Usuário não encontrado' ||
       error.message === 'Senha inválida'
@@ -32,7 +27,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 💥 Erro inesperado
     return res.status(500).json({
       message: 'Erro ao realizar login',
       error: error.message

@@ -19,6 +19,7 @@ interface Profissional {
   ID_EMPRESARIO: number;
   NOME: string;
   CIDADE?: string;
+  FOTO_PERFIL?: string;
   SERVICOS?: { NOME: string }[];
 }
 
@@ -62,9 +63,9 @@ export default function Recomendados() {
         pathname: '/perfil-empresa-cliente',
         params: { id: item.ID_EMPRESARIO.toString() }
       })}
-    >
+    >  
       <Image 
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.NOME)}&background=random&size=128` }} 
+        source={{ uri: item.FOTO_PERFIL || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.NOME)}&background=random&size=128` }} 
         style={styles.avatar} 
       />
       

@@ -56,12 +56,17 @@ exports.criarCliente = async (req, res) => {
     if (!validarCEP(cep)) return res.status(400).json({ message: 'CEP inválido' });
     if (!validarTelefone(telefone)) return res.status(400).json({ message: 'Telefone inválido' });
 
-    // 3. Tratamento de dados
+    // 3. Captura da Foto do Cloudinary
+    // O multer coloca os dados do upload em req.file
+    const fotoUrl = req.file ? req.file.path : null;
+
+    // 4. Tratamento de dados (incluindo a foto)
     const bodyTratado = {
       ...req.body,
       cpf: limparNumeros(cpf),
       cep: limparNumeros(cep),
-      telefone: limparNumeros(telefone)
+      telefone: limparNumeros(telefone),
+      foto_perfil: fotoUrl // Adicionamos a URL aqui
     };
 
     const novoCliente = await clienteService.criarCliente(bodyTratado);

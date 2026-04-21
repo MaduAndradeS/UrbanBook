@@ -74,34 +74,30 @@ exports.buscarEmpresarioPorId = async (req, res) => {
   }
 };
 
-// ➕ CRIAR EMPRESÁRIO
+/// ➕ CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (req, res) => {
   try {
     const {
       nome, cnpj, email, senha, rua, bairro, cidade, estado, cep, telefone, servicos
     } = req.body;
 
-    // 1. Validação de campos obrigatórios
     if (!nome || !cnpj || !email || !senha || !rua || !bairro || !cidade || !estado || !cep || !telefone) {
       return res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
     }
 
-    // 2. Validação de serviços
-    if (!Array.isArray(servicos) || servicos.length === 0) {
-      return res.status(400).json({ message: 'Selecione pelo menos um serviço' });
-    }
+    // Captura a foto de perfil do Cloudinary
+    const fotoPerfilUrl = req.file ? req.file.path : null;
 
-    // 3. Validações técnicas
     if (!validarCNPJ(cnpj)) return res.status(400).json({ message: 'CNPJ inválido' });
     if (!validarCEP(cep)) return res.status(400).json({ message: 'CEP inválido' });
     if (!validarTelefone(telefone)) return res.status(400).json({ message: 'Telefone inválido' });
 
-    // 4. Tratamento de dados (Limpeza de máscaras)
     const bodyTratado = {
       ...req.body,
       cnpj: limparNumeros(cnpj),
       cep: limparNumeros(cep),
-      telefone: limparNumeros(telefone)
+      telefone: limparNumeros(telefone),
+      foto_perfil: fotoPerfilUrl // Enviando a URL para o service
     };
 
     const novoEmpresario = await empresarioService.criarEmpresario(bodyTratado);
@@ -142,5 +138,76 @@ exports.aprovarEmpresario = async (req, res) => {
       message: 'Erro ao aprovar empresário',
       error: error.message
     });
+  }
+};
+
+// 📅 CONFIGURAR DISPONIBILIDADE
+exports.configurarDisponibilidade = async (req, res) => {
+  try {
+    const { ID_EMPRESARIO } = req.body;
+
+    if (!ID_EMPRESARIO) {
+      return res.status(400).json({ message: "ID do empresário não informado." });
+    }
+
+    const resultado = await empresarioService.salvarDisponibilidade(req.body);
+    
+    return res.status(200).json({
+      message: "Agenda salva com sucesso!",
+      data: resultado
+    });
+  } catch (error) {
+    console.error("❌ Erro ao salvar agenda:", error);
+    return res.status(500).json({ 
+      message: "Erro ao processar sua agenda no servidor.",
+      error: error.message 
+    });
+  }
+};
+
+// 💼 ADICIONAR FOTO DE TRABALHO (PORTFÓLIO)
+exports.adicionarFotoTrabalho = async (req, res) => {
+  try {
+    const { id_empresario } = req.body;
+
+    if (!id_empresario) {
+      return res.status(400).json({ message: 'ID do empresário é obrigatório' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nenhuma foto enviada' });
+    }
+
+    const fotoTrabalhoUrl = req.file.path;
+
+    const novaFoto = await empresarioService.adicionarFotoTrabalho(
+      Number(id_empresario), 
+      fotoTrabalhoUrl
+    );
+
+    return res.status(201).json({
+      message: 'Foto adicionada ao portfólio com sucesso!',
+      foto: novaFoto
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Erro ao subir foto do trabalho',
+      error: error.message
+    });
+  }
+};
+
+exports.buscarDisponibilidade = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const disponibilidade = await empresarioService.buscarDisponibilidadePorId(id);
+
+    if (!disponibilidade) {
+      return res.status(404).json({ message: "Agenda não configurada." });
+    }
+
+    return res.status(200).json(disponibilidade);
+  } catch (error) {
+    return res.status(500).json({ message: "Erro ao buscar agenda." });
   }
 };

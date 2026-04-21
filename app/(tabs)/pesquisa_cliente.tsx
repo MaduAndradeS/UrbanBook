@@ -33,6 +33,7 @@ const CATEGORIAS = [
 interface Empresario {
   ID_EMPRESARIO: number;
   NOME: string;
+  FOTO_PERFIL?: string; // Campo agora reconhecido pelo TS
   SERVICOS?: { NOME: string }[];
 }
 
@@ -54,7 +55,7 @@ export default function PesquisaCliente() {
       const response = await fetch(`${API_URL}/empresarios?busca=${encodeURIComponent(texto)}`);
       if (!response.ok) throw new Error('Erro na conexão');
       const dados = await response.json();
-      setUsuariosFiltrados(dados);
+      setUsuariosFiltrados(Array.isArray(dados) ? dados : []);
     } catch (error) {
       console.error('Erro ao buscar:', error);
     } finally {
@@ -69,25 +70,34 @@ export default function PesquisaCliente() {
     return () => clearTimeout(delay);
   }, [busca]);
 
-  // Renderizador da Busca (Lista Estilo Instagram)
-  const renderItemBusca = ({ item }: { item: Empresario }) => (
-    <TouchableOpacity 
-      style={styles.itemBusca} 
-      onPress={() => router.push({
-        pathname: '/(tabs)/perfil-empresa',
-        params: { id: item.ID_EMPRESARIO.toString() }
-      })}
-    >
-      <Image 
-        source={{ uri: `https://ui-avatars.com/api/?name=${item.NOME}&background=random` }} 
-        style={styles.avatarBusca} 
-      />
-      <View>
-        <Text style={styles.nomeBusca}>{item.NOME}</Text>
-        <Text style={styles.servicoBusca}>{item.SERVICOS?.[0]?.NOME || 'Profissional'}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  // --- RENDERIZADOR DA BUSCA (CORRIGIDO) ---
+  const renderItemBusca = ({ item }: { item: Empresario }) => {
+    // Lógica de Foto: Prioriza banco de dados, senão usa avatar gerado
+    const uriFinal = item.FOTO_PERFIL 
+      ? item.FOTO_PERFIL 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.NOME)}&background=random&size=128`;
+
+    return (
+      <TouchableOpacity 
+        style={styles.itemBusca} 
+        onPress={() => router.push({
+          pathname: '/perfil-empresa-cliente', // Ajustado para a rota correta de visualização
+          params: { id: item.ID_EMPRESARIO.toString() }
+        })}
+      >
+        <Image 
+          source={{ uri: uriFinal }} 
+          style={styles.avatarBusca} 
+        />
+        <View style={styles.infoBusca}>
+          <Text style={styles.nomeBusca}>{item.NOME}</Text>
+          <Text style={styles.servicoBusca}>
+            {item.SERVICOS?.[0]?.NOME || 'Profissional'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   // Renderizador das Categorias (Cards)
   const renderItemCategoria = ({ item }: any) => (
@@ -108,7 +118,6 @@ export default function PesquisaCliente() {
 
   return (
     <View style={styles.container}>
-      {/* BARRA DE PESQUISA */}
       <View style={styles.barraPesquisa}>
         <Ionicons name="search" size={18} color="#000" />
         <TextInput
@@ -125,7 +134,6 @@ export default function PesquisaCliente() {
         )}
       </View>
 
-      {/* CONTEÚDO DINÂMICO */}
       {busca.trim().length > 0 ? (
         <View style={{ flex: 1, paddingHorizontal: 20 }}>
           {carregando ? (
@@ -161,11 +169,7 @@ export default function PesquisaCliente() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#ffffff',
-    paddingTop: 15 // Espaço para não colar no topo agora que a logo saiu
-  },
+  container: { flex: 1, backgroundColor: '#ffffff', paddingTop: 15 },
   barraPesquisa: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -177,14 +181,7 @@ const styles = StyleSheet.create({
     marginBottom: 10 
   },
   input: { flex: 1, fontSize: 14, marginLeft: 8, color: '#000' },
-  tituloSecao: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    marginLeft: 10, 
-    marginTop: 15, 
-    marginBottom: 15, 
-    color: '#000' 
-  },
+  tituloSecao: { fontSize: 16, fontWeight: 'bold', marginLeft: 10, marginTop: 15, marginBottom: 15, color: '#000' },
   listContent: { paddingHorizontal: 10, paddingBottom: 30 },
   row: { justifyContent: 'space-between', marginBottom: 10 },
   card: { 
@@ -218,7 +215,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5, 
     borderBottomColor: '#eee' 
   },
-  avatarBusca: { width: 50, height: 50, borderRadius: 25, marginRight: 15 },
+  infoBusca: { flex: 1 },
+  avatarBusca: { width: 50, height: 50, borderRadius: 25, marginRight: 15, backgroundColor: '#eee' },
   nomeBusca: { fontSize: 16, fontWeight: '600', color: '#333' },
   servicoBusca: { fontSize: 13, color: '#8e8e8e' },
   vazio: { textAlign: 'center', marginTop: 30, color: '#8e8e8e' }

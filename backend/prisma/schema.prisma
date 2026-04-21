@@ -104,16 +104,15 @@ model TELEFONE {
 }
 
 model DISPONIBILIDADE {
-  ID_DISP         Int                        @id @default(autoincrement())
-  ID_EMPRESARIO   Int
-  DATA            DateTime                   @db.Date
-  HORA_ABERTURA   String                     @db.VarChar(5)
-  HORA_FECHAMENTO String                     @db.VarChar(5)
-  DURACAO_MIN     Int                        @default(30)
-  BLOQUEIOS       BLOQUEIO_DISPONIBILIDADE[]
-  EMPRESARIO      EMPRESARIO                 @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_DISPONIBILIDADE_EMPRESARIO")
+  ID_DISP       Int                        @id @default(autoincrement())
+  ID_EMPRESARIO Int
+  DURACAO_MIN   Int?
+  createdAt     DateTime?                  @default(now()) @db.DateTime(0)
+  PERIODOS      String                     @db.Text
+  DIAS_ATIVOS   String                     @db.Text
+  BLOQUEIOS     BLOQUEIO_DISPONIBILIDADE[]
+  EMPRESARIO    EMPRESARIO                 @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_DISPONIBILIDADE_EMPRESARIO")
 
-  @@unique([ID_EMPRESARIO, DATA], map: "UQ_DISPONIBILIDADE_EMPRESARIO_DATA")
   @@index([ID_EMPRESARIO], map: "IDX_DISPONIBILIDADE_EMPRESARIO")
 }
 

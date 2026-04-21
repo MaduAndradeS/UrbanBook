@@ -103,13 +103,21 @@ export default function PerfilEmpresaScreen() {
         ))}
 
         <View style={s.btnContainer}>
-          <TouchableOpacity
-            style={s.agendarBtn}
-            onPress={() => router.push('/Cliente_Datas')}
-          >
-            <Text style={s.agendarText}>Agendar serviço</Text>
-          </TouchableOpacity>
-        </View>
+  <TouchableOpacity
+    style={s.agendarBtn}
+    onPress={() => 
+      router.push({
+        pathname: '/Cliente_Datas',
+        params: { 
+          id: '1', // Aqui você força o ID 1 que criamos no banco
+          nome: empresa.nome 
+        }
+      })
+    }
+  >
+    <Text style={s.agendarText}>Agendar serviço</Text>
+  </TouchableOpacity>
+</View>
 
         {/* Espaço final para respiro da rolagem */}
         <View style={{ height: 40 }} />

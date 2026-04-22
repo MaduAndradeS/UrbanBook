@@ -1,4 +1,6 @@
 const empresarioService = require('../services/empresario.service');
+const cloudinary = require('cloudinary').v2;
+
 const {
   limparNumeros,
   validarCNPJ,
@@ -23,8 +25,7 @@ exports.listarEmpresarios = async (req, res) => {
       categoria || undefined
     );
 
-    const empresariosSemSenha = empresarios.map(removerSenha);
-    return res.status(200).json(empresariosSemSenha);
+    return res.status(200).json(empresarios.map(removerSenha));
 
   } catch (error) {
     console.error("❌ Erro no Prisma:", error);
@@ -74,7 +75,7 @@ exports.buscarEmpresarioPorId = async (req, res) => {
   }
 };
 
-/// ➕ CRIAR EMPRESÁRIO
+// ➕ CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (req, res) => {
   try {
     const {
@@ -85,7 +86,6 @@ exports.criarEmpresario = async (req, res) => {
       return res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
     }
 
-    // Captura a foto de perfil do Cloudinary
     const fotoPerfilUrl = req.file ? req.file.path : null;
 
     if (!validarCNPJ(cnpj)) return res.status(400).json({ message: 'CNPJ inválido' });
@@ -97,16 +97,28 @@ exports.criarEmpresario = async (req, res) => {
       cnpj: limparNumeros(cnpj),
       cep: limparNumeros(cep),
       telefone: limparNumeros(telefone),
-      foto_perfil: fotoPerfilUrl // Enviando a URL para o service
+      foto_perfil: fotoPerfilUrl
     };
 
     const novoEmpresario = await empresarioService.criarEmpresario(bodyTratado);
     return res.status(201).json(removerSenha(novoEmpresario));
 
   } catch (error) {
+
+    // 🚨 Deleta foto de perfil se deu erro
+    if (req.file && req.file.filename) {
+      try {
+        await cloudinary.uploader.destroy(req.file.filename);
+        console.log("Imagem de perfil deletada do Cloudinary");
+      } catch (e) {
+        console.error("Erro ao deletar imagem:", e);
+      }
+    }
+
     if (error.code === 'P2002') {
       return res.status(400).json({ message: 'CNPJ ou email já cadastrado' });
     }
+
     return res.status(500).json({
       message: 'Erro ao criar empresário',
       error: error.message
@@ -114,7 +126,7 @@ exports.criarEmpresario = async (req, res) => {
   }
 };
 
-// ✅ APROVAR EMPRESÁRIO (ADM)
+// ✅ APROVAR EMPRESÁRIO
 exports.aprovarEmpresario = async (req, res) => {
   try {
     const idEmpresario = Number(req.params.id);
@@ -165,7 +177,7 @@ exports.configurarDisponibilidade = async (req, res) => {
   }
 };
 
-// 💼 ADICIONAR FOTO DE TRABALHO (PORTFÓLIO)
+// 💼 ADICIONAR FOTO DE TRABALHO
 exports.adicionarFotoTrabalho = async (req, res) => {
   try {
     const { id_empresario } = req.body;
@@ -189,7 +201,19 @@ exports.adicionarFotoTrabalho = async (req, res) => {
       message: 'Foto adicionada ao portfólio com sucesso!',
       foto: novaFoto
     });
+
   } catch (error) {
+
+    // 🚨 Deleta foto de trabalho se deu erro
+    if (req.file && req.file.filename) {
+      try {
+        await cloudinary.uploader.destroy(req.file.filename);
+        console.log("Foto de trabalho deletada do Cloudinary");
+      } catch (e) {
+        console.error("Erro ao deletar foto:", e);
+      }
+    }
+
     return res.status(500).json({
       message: 'Erro ao subir foto do trabalho',
       error: error.message

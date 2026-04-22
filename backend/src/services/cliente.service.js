@@ -48,7 +48,7 @@ exports.criarCliente = async (data) => {
       DATA_NASC: new Date(data.data_nasc),
       EMAIL: data.email,
       SENHA_HASH: data.senha,
-      FOTO_PERFIL: data.foto_perfil, // <-- ADICIONADO AQUI
+      FOTO_PERFIL: data.foto_perfil || null,
       ID_EMPRESARIO: data.id_empresario || null
     }
   });

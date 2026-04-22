@@ -1,4 +1,6 @@
 const clienteService = require('../services/cliente.service');
+const cloudinary = require('cloudinary').v2;
+
 const {
   limparNumeros,
   validarCPF,
@@ -72,13 +74,25 @@ exports.criarCliente = async (req, res) => {
     const novoCliente = await clienteService.criarCliente(bodyTratado);
     return res.status(201).json(removerSenha(novoCliente));
 
-  } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(400).json({ message: 'CPF ou email já cadastrado' });
+ } catch (error) {
+
+  // 🚨 Se a imagem foi enviada, deletar do Cloudinary
+  if (req.file && req.file.filename) {
+    try {
+      await cloudinary.uploader.destroy(req.file.filename);
+      console.log("Imagem deletada do Cloudinary");
+    } catch (e) {
+      console.error("Erro ao deletar imagem:", e);
     }
-    return res.status(500).json({ 
-      message: 'Erro ao criar cliente', 
-      error: error.message 
-    });
   }
+
+  if (error.code === 'P2002') {
+    return res.status(400).json({ message: 'CPF ou email já cadastrado' });
+  }
+
+  return res.status(500).json({ 
+    message: 'Erro ao criar cliente', 
+    error: error.message 
+  });
+}
 };

@@ -1,12 +1,12 @@
 const express = require('express');
-const router = express.Router(); // Você definiu como 'router' aqui
+const router = express.Router();
+
 const multer = require('multer');
 const storage = require('../services/cloudinary');
 const upload = multer({ storage });
-const prisma = require('../lib/prisma'); // Importe o prisma para usar no patch
 
+const prisma = require('../lib/prisma');
 const clienteController = require('../controllers/cliente.controller');
-
 
 // 🔎 LISTAR + BUSCAR
 router.get('/', clienteController.listarClientes);
@@ -14,16 +14,14 @@ router.get('/', clienteController.listarClientes);
 // 🎯 BUSCAR POR ID
 router.get('/:id', clienteController.buscarClientePorId);
 
+// ➕ CRIAR CLIENTE (COM OU SEM FOTO)
 router.post('/', upload.single('foto'), clienteController.criarCliente);
 
-// ➕ CRIAR
-router.post('/', clienteController.criarCliente);
-
-// 📸 ATUALIZAR FOTO (Corrigido para 'router')
+// 📸 ATUALIZAR FOTO DE PERFIL
 router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {
-    const { id } = req.body; 
-    
+    const { id } = req.body;
+
     if (!req.file) {
       return res.status(400).json({ erro: "Nenhuma foto enviada" });
     }
@@ -36,6 +34,7 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
     });
 
     return res.json(cliente);
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ erro: "Erro ao atualizar foto do cliente" });

@@ -14,7 +14,17 @@ const removerSenha = (empresario) => {
   return empresarioSemSenha;
 };
 
-// 🔎 LISTAR (com busca e categoria)
+const apagarImagemCloudinary = async (req) => {
+  if (req.file && req.file.filename) {
+    try {
+      await cloudinary.uploader.destroy(req.file.filename);
+      console.log('Imagem deletada do Cloudinary');
+    } catch (e) {
+      console.error('Erro ao deletar imagem:', e);
+    }
+  }
+};
+
 exports.listarEmpresarios = async (req, res) => {
   try {
     const { busca, categoria } = req.query;
@@ -34,7 +44,6 @@ exports.listarEmpresarios = async (req, res) => {
   }
 };
 
-// ⏳ PENDENTES
 exports.listarEmpresariosPendentes = async (req, res) => {
   try {
     const empresarios = await empresarioService.listarEmpresariosPendentes();
@@ -47,7 +56,6 @@ exports.listarEmpresariosPendentes = async (req, res) => {
   }
 };
 
-// 🎯 BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -73,7 +81,6 @@ exports.buscarEmpresarioPorId = async (req, res) => {
   }
 };
 
-// ➕ CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (req, res) => {
   try {
     const {
@@ -91,33 +98,51 @@ exports.criarEmpresario = async (req, res) => {
     } = req.body;
 
     if (
-      !nome || !cnpj || !email || !senha ||
-      !rua || !bairro || !cidade || !estado || !cep || !telefone
+      !nome ||
+      !cnpj ||
+      !email ||
+      !senha ||
+      !rua ||
+      !bairro ||
+      !cidade ||
+      !estado ||
+      !cep ||
+      !telefone
     ) {
+      await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
       });
     }
 
     if (!Array.isArray(servicos) || servicos.length === 0) {
+      await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'Selecione pelo menos um serviço'
       });
     }
 
     if (!validarCNPJ(cnpj)) {
-      return res.status(400).json({ message: 'CNPJ inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'CNPJ inválido'
+      });
     }
 
     if (!validarCEP(cep)) {
-      return res.status(400).json({ message: 'CEP inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'CEP inválido'
+      });
     }
 
     if (!validarTelefone(telefone)) {
-      return res.status(400).json({ message: 'Telefone inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Telefone inválido'
+      });
     }
 
-    // 📸 FOTO PERFIL
     const fotoPerfilUrl = req.file ? req.file.path : null;
 
     const bodyTratado = {
@@ -131,17 +156,8 @@ exports.criarEmpresario = async (req, res) => {
     const novoEmpresario = await empresarioService.criarEmpresario(bodyTratado);
 
     return res.status(201).json(removerSenha(novoEmpresario));
-
   } catch (error) {
-
-    // 🔥 LIMPAR FOTO PERFIL SE ERRO
-    if (req.file && req.file.filename) {
-      try {
-        await cloudinary.uploader.destroy(req.file.filename);
-      } catch (e) {
-        console.error('Erro ao deletar imagem:', e);
-      }
-    }
+    await apagarImagemCloudinary(req);
 
     if (error.code === 'P2002') {
       return res.status(400).json({
@@ -156,12 +172,12 @@ exports.criarEmpresario = async (req, res) => {
   }
 };
 
-// 📷 ADICIONAR FOTO DE TRABALHO
 exports.adicionarFotoTrabalho = async (req, res) => {
   try {
     const { id_empresario } = req.body;
 
     if (!id_empresario) {
+      await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'ID do empresário é obrigatório'
       });
@@ -184,17 +200,8 @@ exports.adicionarFotoTrabalho = async (req, res) => {
       message: 'Foto adicionada com sucesso',
       foto: novaFoto
     });
-
   } catch (error) {
-
-    // 🔥 LIMPAR FOTO TRABALHO SE ERRO
-    if (req.file && req.file.filename) {
-      try {
-        await cloudinary.uploader.destroy(req.file.filename);
-      } catch (e) {
-        console.error('Erro ao deletar foto:', e);
-      }
-    }
+    await apagarImagemCloudinary(req);
 
     return res.status(500).json({
       message: 'Erro ao enviar foto de trabalho',
@@ -203,7 +210,6 @@ exports.adicionarFotoTrabalho = async (req, res) => {
   }
 };
 
-// ✅ APROVAR
 exports.aprovarEmpresario = async (req, res) => {
   try {
     const idEmpresario = Number(req.params.id);
@@ -224,7 +230,6 @@ exports.aprovarEmpresario = async (req, res) => {
       message: 'Empresário aprovado com sucesso',
       empresario: removerSenha(empresarioAtualizado)
     });
-
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao aprovar empresário',
@@ -233,7 +238,6 @@ exports.aprovarEmpresario = async (req, res) => {
   }
 };
 
-// 📅 DISPONIBILIDADE
 exports.configurarDisponibilidade = async (req, res) => {
   try {
     const { ID_EMPRESARIO } = req.body;
@@ -250,7 +254,6 @@ exports.configurarDisponibilidade = async (req, res) => {
       message: 'Agenda salva com sucesso',
       data: resultado
     });
-
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao salvar disponibilidade',
@@ -259,7 +262,6 @@ exports.configurarDisponibilidade = async (req, res) => {
   }
 };
 
-// 🔎 BUSCAR DISPONIBILIDADE
 exports.buscarDisponibilidade = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -273,7 +275,6 @@ exports.buscarDisponibilidade = async (req, res) => {
     }
 
     return res.status(200).json(disponibilidade);
-
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao buscar disponibilidade',

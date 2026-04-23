@@ -14,6 +14,17 @@ const removerSenha = (cliente) => {
   return clienteSemSenha;
 };
 
+const apagarImagemCloudinary = async (req) => {
+  if (req.file && req.file.filename) {
+    try {
+      await cloudinary.uploader.destroy(req.file.filename);
+      console.log('Imagem deletada do Cloudinary');
+    } catch (e) {
+      console.error('Erro ao deletar imagem:', e);
+    }
+  }
+};
+
 // listar clientes com busca opcional
 exports.listarClientes = async (req, res) => {
   try {
@@ -67,7 +78,6 @@ exports.criarCliente = async (req, res) => {
       telefone
     } = req.body;
 
-    // validação de campos
     if (
       !nome ||
       !cpf ||
@@ -81,28 +91,35 @@ exports.criarCliente = async (req, res) => {
       !cep ||
       !telefone
     ) {
+      await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
       });
     }
 
-    // validações técnicas
     if (!validarCPF(cpf)) {
-      return res.status(400).json({ message: 'CPF inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'CPF inválido'
+      });
     }
 
     if (!validarCEP(cep)) {
-      return res.status(400).json({ message: 'CEP inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'CEP inválido'
+      });
     }
 
     if (!validarTelefone(telefone)) {
-      return res.status(400).json({ message: 'Telefone inválido' });
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Telefone inválido'
+      });
     }
 
-    // foto opcional
     const fotoUrl = req.file ? req.file.path : null;
 
-    // tratamento de dados
     const bodyTratado = {
       ...req.body,
       cpf: limparNumeros(cpf),
@@ -114,18 +131,8 @@ exports.criarCliente = async (req, res) => {
     const novoCliente = await clienteService.criarCliente(bodyTratado);
 
     return res.status(201).json(removerSenha(novoCliente));
-
   } catch (error) {
-
-    // LIMPEZA DO CLOUDINARY SE DER ERRO
-    if (req.file && req.file.filename) {
-      try {
-        await cloudinary.uploader.destroy(req.file.filename);
-        console.log('Imagem deletada do Cloudinary');
-      } catch (e) {
-        console.error('Erro ao deletar imagem:', e);
-      }
-    }
+    await apagarImagemCloudinary(req);
 
     if (error.code === 'P2002') {
       return res.status(400).json({

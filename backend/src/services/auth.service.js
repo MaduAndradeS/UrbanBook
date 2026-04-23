@@ -11,14 +11,9 @@ exports.login = async (email, senha) => {
   });
 
   if (cliente) {
-    const senhaValida = await bcrypt.compare(
-      senha,
-      cliente.SENHA_HASH
-    );
+    const senhaValida = await bcrypt.compare(senha, cliente.SENHA_HASH);
 
-    if (!senhaValida) {
-      throw new Error('Senha inválida');
-    }
+    if (!senhaValida) throw new Error('Senha inválida');
 
     const { SENHA_HASH, ...clienteSemSenha } = cliente;
 
@@ -28,21 +23,50 @@ exports.login = async (email, senha) => {
       { expiresIn: '1d' }
     );
 
-    return {
-      tipo: 'CLIENTE',
-      usuario: clienteSemSenha,
-      token
-    };
+    return { tipo: 'CLIENTE', usuario: clienteSemSenha, token };
   }
 
-  exports.registerCliente = async (email, senha) => {
+  const empresario = await prisma.eMPRESARIO.findUnique({
+    where: { EMAIL: email }
+  });
+
+  if (empresario) {
+    const senhaValida = await bcrypt.compare(senha, empresario.SENHA_HASH);
+
+    if (!senhaValida) throw new Error('Senha inválida');
+
+    const { SENHA_HASH, ...empresarioSemSenha } = empresario;
+
+    const token = jwt.sign(
+      { id: empresario.ID_EMPRESARIO, tipo: 'EMPRESARIO' },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    return { tipo: 'EMPRESARIO', usuario: empresarioSemSenha, token };
+  }
+
+  if (email === 'adm@urbanbook.com' && senha === '123456') {
+    const adm = await prisma.aDM.findFirst();
+
+    const token = jwt.sign(
+      { id: adm.ID_ADM, tipo: 'ADM' },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    return { tipo: 'ADM', usuario: adm, token };
+  }
+
+  throw new Error('Usuário não encontrado');
+};
+
+exports.registerCliente = async (email, senha) => {
   const existe = await prisma.cLIENTE.findUnique({
     where: { EMAIL: email }
   });
 
-  if (existe) {
-    throw new Error('Usuário já existe');
-  }
+  if (existe) throw new Error('Usuário já existe');
 
   const senhaHash = await bcrypt.hash(senha, 10);
 
@@ -54,49 +78,15 @@ exports.login = async (email, senha) => {
   });
 
   const { SENHA_HASH, ...clienteSemSenha } = cliente;
-
   return clienteSemSenha;
 };
 
-  const empresario = await prisma.eMPRESARIO.findUnique({
-    where: { EMAIL: email }
-  });
-
-  if (empresario) {
-    const senhaValida = await bcrypt.compare(
-      senha,
-      empresario.SENHA_HASH
-    );
-
-    if (!senhaValida) {
-      throw new Error('Senha inválida');
-    }
-
-    const { SENHA_HASH, ...empresarioSemSenha } = empresario;
-
-    const token = jwt.sign(
-      { id: empresario.ID_EMPRESARIO, tipo: 'EMPRESARIO' },
-      JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    return {
-      tipo: 'EMPRESARIO',
-      usuario: empresarioSemSenha,
-      token
-    };
-  }
-
-<<<<<<< Updated upstream
-=======
-  exports.registerEmpresario = async (email, senha) => {
+exports.registerEmpresario = async (email, senha) => {
   const existe = await prisma.eMPRESARIO.findUnique({
     where: { EMAIL: email }
   });
 
-  if (existe) {
-    throw new Error('Usuário já existe');
-  }
+  if (existe) throw new Error('Usuário já existe');
 
   const senhaHash = await bcrypt.hash(senha, 10);
 
@@ -108,27 +98,5 @@ exports.login = async (email, senha) => {
   });
 
   const { SENHA_HASH, ...empresarioSemSenha } = empresario;
-
   return empresarioSemSenha;
-};
-
-
-  if (email === 'adm@urbanbook.com' && senha === '123456') {
-    const adm = await prisma.aDM.findFirst();
-
-    const token = jwt.sign(
-      { id: adm.ID_ADM, tipo: 'ADM' },
-      JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    return {
-      tipo: 'ADM',
-      usuario: adm,
-      token
-    };
-  }
-
->>>>>>> Stashed changes
-  throw new Error('Usuário não encontrado');
 };

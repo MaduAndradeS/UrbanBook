@@ -1,6 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import logo from '../assets/images/logo.png';
 
 const API_BASE_URL = 'http://10.0.124.8:3333/api';
@@ -31,8 +39,6 @@ export default function App() {
         return;
       }
 
-      await AsyncStorage.setItem('token', data.token);
-
       // 🔥 AQUI ESTÁ A MÁGICA
       if (data.tipo === 'ADM') {
         router.replace('/painelAdm');
@@ -48,14 +54,13 @@ export default function App() {
   }
 
   return (
-     <>
+    <>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.container}>
 
         <View style={styles.top}>
-
-          <Image source={logo} style={{marginTop: 60, width: 125, height: 125 }} />
+          <Image source={logo} style={{ marginTop: 60, width: 125, height: 125 }} />
 
           <Text style={styles.title}>Urban Book</Text>
           <Text style={styles.subtitle}>
@@ -66,29 +71,43 @@ export default function App() {
         <View style={styles.bottom}>
 
           <Text style={styles.label}>E-mail</Text>
-          <TextInput style={styles.input} />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
 
           <Text style={styles.label}>Senha</Text>
-          <TextInput style={styles.input} secureTextEntry />
+          <TextInput
+            style={styles.input}
+            secureTextEntry
+            value={senha}
+            onChangeText={setSenha}
+          />
 
           <TouchableOpacity onPress={() => router.push('/RecSenha')}>
-          <Text style={styles.forgot}>Esqueceu a senha?</Text>
+            <Text style={styles.forgot}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton}>
+          <TouchableOpacity style={styles.loginButton} onPress={fazerLogin}>
             <Text style={styles.loginText}>Login</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/cad_cliente')}>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => router.push('/cad_cliente')}
+          >
             <Text style={styles.registerText}>Cadastre-se</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.googleButton} onPress={() => router.push('/homepage')}>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={() => router.push('/homepage')}
+          >
             <Text>Continuar com Google</Text>
           </TouchableOpacity>
 
         </View>
-
       </View>
     </>
   );

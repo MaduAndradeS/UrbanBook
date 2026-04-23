@@ -1,6 +1,4 @@
 const clienteService = require('../services/cliente.service');
-<<<<<<< Updated upstream
-=======
 const bcrypt = require('bcrypt');
 const {
   limparNumeros,
@@ -8,7 +6,6 @@ const {
   validarCEP,
   validarTelefone
 } = require('../utils/validacoes');
->>>>>>> Stashed changes
 
 const removerSenha = (cliente) => {
   if (!cliente) return cliente;

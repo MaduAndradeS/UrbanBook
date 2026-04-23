@@ -17,13 +17,12 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-<<<<<<< Updated upstream
-=======
 const API_BASE_URL = 'http://10.0.124.8:3333/api';
 
->>>>>>> Stashed changes
 export default function CadCliente() {
   const router = useRouter();
+
+  const [carregando, setCarregando] = useState(false);
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Cliente');
 
@@ -37,27 +36,28 @@ export default function CadCliente() {
   const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('');
   const [uf, setUf] = useState('');
+  const [senha, setSenha] = useState('');
+  const [telefone, setTelefone] = useState('');
 
-  function validarCadastro() {
+  async function validarCadastro() {
     if (
       !nome.trim() ||
       !cpf.trim() ||
       !email.trim() ||
+      !senha.trim() ||
       !dataNascimento.trim() ||
       !cep.trim() ||
       !numero.trim() ||
       !rua.trim() ||
       !bairro.trim() ||
       !cidade.trim() ||
-      !uf.trim()
+      !uf.trim() ||
+      !telefone.trim()
     ) {
       Alert.alert('Atenção', 'Preencha todos os campos.');
       return;
     }
 
-<<<<<<< Updated upstream
-    Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
-=======
     try {
       setCarregando(true);
 
@@ -71,15 +71,14 @@ export default function CadCliente() {
           cpf: cpf.trim(),
           data_nasc: dataNascimento.trim(),
           email: email.trim(),
-          senha: senha.trim(),
+          senha: senha,
           rua: rua.trim(),
           num: Number(numero),
           bairro: bairro.trim(),
           cidade: cidade.trim(),
           estado: uf.trim().toUpperCase(),
           cep: cep.trim(),
-          comp: complemento.trim(),
-          telefone: telefone.trim(),
+          telefone: telefone.trim()
         }),
       });
 
@@ -114,7 +113,6 @@ export default function CadCliente() {
     } finally {
       setCarregando(false);
     }
->>>>>>> Stashed changes
   }
 
   return (
@@ -150,6 +148,14 @@ export default function CadCliente() {
             onChangeText={setNome}
           />
 
+          <Text style={styles.label}>Senha</Text>
+          <TextInput
+            style={styles.input}
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+          />
+
           <Text style={styles.label}>CPF</Text>
           <TextInput
             style={styles.input}
@@ -169,6 +175,13 @@ export default function CadCliente() {
             style={styles.input}
             value={dataNascimento}
             onChangeText={setDataNascimento}
+          />
+
+          <Text style={styles.label}>Telefone</Text>
+          <TextInput
+            style={styles.input}
+            value={telefone}
+            onChangeText={setTelefone}
           />
 
           <Text style={styles.label}>Endereço</Text>
@@ -451,3 +464,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+

@@ -45,7 +45,7 @@ exports.buscarEmpresarioPorId = async (id) => {
 exports.criarEmpresario = async (data) => {
   const senhaHash = await bcrypt.hash(data.senha, 10);
 
-  return await prisma.eMPRESARIO.create({
+  const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
       NOME: data.nome,
       CNPJ: data.cnpj,
@@ -76,7 +76,7 @@ exports.criarEmpresario = async (data) => {
     }
   });
 
-  if (Array.isArray(data.servicos) && data.servicos.length > 0) {
+  if (Array.isArray(data.servicos)) {
     for (const nomeServico of data.servicos) {
       await prisma.sERVICOS.create({
         data: {

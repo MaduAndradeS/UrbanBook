@@ -5,16 +5,18 @@ const clienteRoutes = require('./cliente.routes');
 const empresarioRoutes = require('./empresario.routes');
 const authRoutes = require('./auth.routes');
 const admRoutes = require('./adm.routes');
+const agendamentoRoutes = require('./agendamento.routes');
 
+// rota raiz
 router.get('/', (req, res) => {
   res.send('API UrbanBook funcionando');
 });
 
+// 📌 módulos da API
 router.use('/clientes', clienteRoutes);
 router.use('/empresarios', empresarioRoutes);
 router.use('/auth', authRoutes);
-
-// ROTAS TEMPORÁRIAS DE TESTE PARA ADM
-router.use('/test/adms', admRoutes);
+router.use('/agendamentos', agendamentoRoutes);
+router.use('/adm', admRoutes);
 
 module.exports = router;

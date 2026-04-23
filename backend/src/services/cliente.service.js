@@ -1,7 +1,16 @@
 const prisma = require('../lib/prisma');
 
-exports.listarClientes = async () => {
+// listar clientes com busca opcional
+exports.listarClientes = async (termoBusca) => {
   return await prisma.cLIENTE.findMany({
+    where: {
+      ...(termoBusca && {
+        OR: [
+          { NOME: { contains: termoBusca, mode: 'insensitive' } },
+          { EMAIL: { contains: termoBusca, mode: 'insensitive' } }
+        ]
+      })
+    },
     include: {
       ENDERECO: true,
       TELEFONE: true
@@ -9,6 +18,7 @@ exports.listarClientes = async () => {
   });
 };
 
+// buscar cliente por id
 exports.buscarClientePorId = async (id) => {
   return await prisma.cLIENTE.findUnique({
     where: {
@@ -21,6 +31,7 @@ exports.buscarClientePorId = async (id) => {
   });
 };
 
+// criar cliente
 exports.criarCliente = async (data) => {
   const novoCliente = await prisma.cLIENTE.create({
     data: {
@@ -29,6 +40,7 @@ exports.criarCliente = async (data) => {
       DATA_NASC: new Date(data.data_nasc),
       EMAIL: data.email,
       SENHA_HASH: data.senha,
+      FOTO_PERFIL: data.foto_perfil || null,
       ID_EMPRESARIO: data.id_empresario || null
     }
   });

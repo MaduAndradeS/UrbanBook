@@ -1,4 +1,6 @@
 const clienteService = require('../services/cliente.service');
+const cloudinary = require('cloudinary').v2;
+
 const {
   limparNumeros,
   validarCPF,
@@ -8,14 +10,16 @@ const {
 
 const removerSenha = (cliente) => {
   if (!cliente) return cliente;
-
   const { SENHA_HASH, ...clienteSemSenha } = cliente;
   return clienteSemSenha;
 };
 
+// listar clientes com busca opcional
 exports.listarClientes = async (req, res) => {
   try {
-    const clientes = await clienteService.listarClientes();
+    const { busca } = req.query;
+    const clientes = await clienteService.listarClientes(busca);
+
     return res.status(200).json(clientes.map(removerSenha));
   } catch (error) {
     return res.status(500).json({
@@ -25,6 +29,7 @@ exports.listarClientes = async (req, res) => {
   }
 };
 
+// buscar cliente por ID
 exports.buscarClientePorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -45,6 +50,7 @@ exports.buscarClientePorId = async (req, res) => {
   }
 };
 
+// criar cliente
 exports.criarCliente = async (req, res) => {
   try {
     const {
@@ -61,6 +67,7 @@ exports.criarCliente = async (req, res) => {
       telefone
     } = req.body;
 
+    // validação de campos
     if (
       !nome ||
       !cpf ||
@@ -79,35 +86,47 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
+    // validações técnicas
     if (!validarCPF(cpf)) {
-      return res.status(400).json({
-        message: 'CPF inválido'
-      });
+      return res.status(400).json({ message: 'CPF inválido' });
     }
 
     if (!validarCEP(cep)) {
-      return res.status(400).json({
-        message: 'CEP inválido'
-      });
+      return res.status(400).json({ message: 'CEP inválido' });
     }
 
     if (!validarTelefone(telefone)) {
-      return res.status(400).json({
-        message: 'Telefone inválido'
-      });
+      return res.status(400).json({ message: 'Telefone inválido' });
     }
 
+    // foto opcional
+    const fotoUrl = req.file ? req.file.path : null;
+
+    // tratamento de dados
     const bodyTratado = {
       ...req.body,
       cpf: limparNumeros(cpf),
       cep: limparNumeros(cep),
-      telefone: limparNumeros(telefone)
+      telefone: limparNumeros(telefone),
+      foto_perfil: fotoUrl
     };
 
     const novoCliente = await clienteService.criarCliente(bodyTratado);
 
     return res.status(201).json(removerSenha(novoCliente));
+
   } catch (error) {
+
+    // LIMPEZA DO CLOUDINARY SE DER ERRO
+    if (req.file && req.file.filename) {
+      try {
+        await cloudinary.uploader.destroy(req.file.filename);
+        console.log('Imagem deletada do Cloudinary');
+      } catch (e) {
+        console.error('Erro ao deletar imagem:', e);
+      }
+    }
+
     if (error.code === 'P2002') {
       return res.status(400).json({
         message: 'CPF ou email já cadastrado'

@@ -106,7 +106,7 @@ exports.criarEmpresario = async (req, res) => {
         message: 'CNPJ ou email já cadastrado'
       });
     }
-
+    console.log("ERRO REAL:", error);
     return res.status(500).json({
       message: 'Erro ao criar empresário',
       error: error.message

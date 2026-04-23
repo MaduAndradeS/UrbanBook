@@ -1,4 +1,14 @@
 const clienteService = require('../services/cliente.service');
+<<<<<<< Updated upstream
+=======
+const bcrypt = require('bcrypt');
+const {
+  limparNumeros,
+  validarCPF,
+  validarCEP,
+  validarTelefone
+} = require('../utils/validacoes');
+>>>>>>> Stashed changes
 
 const removerSenha = (cliente) => {
   if (!cliente) return cliente;
@@ -42,7 +52,6 @@ exports.buscarClientePorId = async (req, res) => {
     });
   }
 };
-
 exports.criarCliente = async (req, res) => {
   try {
     const {
@@ -87,9 +96,9 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
-    return res.status(500).json({
-      message: 'Erro ao criar cliente',
-      error: error.message
-    });
-  }
-};
+      return res.status(500).json({
+        message: 'Erro ao criar cliente',
+        error: error.message
+      });
+    }
+  };

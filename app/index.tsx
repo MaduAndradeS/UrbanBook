@@ -1,8 +1,52 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import logo from '../assets/images/logo.png';
+
+const API_BASE_URL = 'http://10.0.124.8:3333/api';
+
 export default function App() {
   const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+
+  async function fazerLogin() {
+    if (!email || !senha) {
+      Alert.alert('Atenção', 'Preencha email e senha');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.message);
+        return;
+      }
+
+      await AsyncStorage.setItem('token', data.token);
+
+      // 🔥 AQUI ESTÁ A MÁGICA
+      if (data.tipo === 'ADM') {
+        router.replace('/painelAdm');
+      } else if (data.tipo === 'CLIENTE') {
+        router.replace('/homepage');
+      } else if (data.tipo === 'EMPRESARIO') {
+        router.replace('/homepage'); // pode mudar depois
+      }
+
+    } catch (error) {
+      Alert.alert('Erro', 'Erro ao conectar com servidor');
+    }
+  }
+
   return (
      <>
       <Stack.Screen options={{ headerShown: false }} />

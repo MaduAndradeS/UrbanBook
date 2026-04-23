@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const bcrypt = require('bcrypt');
 
 exports.listarClientes = async () => {
   return await prisma.cLIENTE.findMany({
@@ -21,18 +22,18 @@ exports.buscarClientePorId = async (id) => {
   });
 };
 
-exports.criarCliente = async (data) => {
-  const novoCliente = await prisma.cLIENTE.create({
+exports.criarCliente = async (dados) => {
+  const senhaHash = await bcrypt.hash(dados.senha, 10);
+
+  return await prisma.cLIENTE.create({
     data: {
-      NOME: data.nome,
-      CPF: data.cpf,
-      DATA_NASC: new Date(data.data_nasc),
-      EMAIL: data.email,
-      SENHA_HASH: data.senha,
-      ID_EMPRESARIO: data.id_empresario || null
+      EMAIL: dados.email,
+      SENHA_HASH: senhaHash,
+      NOME: dados.nome,
+      CPF: dados.cpf,
+      DATA_NASC: new Date(dados.data_nasc),
     }
   });
-
   await prisma.eNDERECO.create({
     data: {
       ID_CLIENTE: novoCliente.ID_CLIENTE,

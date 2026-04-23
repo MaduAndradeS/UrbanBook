@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const bcrypt = require('bcrypt');
 
 exports.listarEmpresarios = async () => {
   return await prisma.eMPRESARIO.findMany({
@@ -42,13 +43,15 @@ exports.buscarEmpresarioPorId = async (id) => {
 };
 
 exports.criarEmpresario = async (data) => {
-  const novoEmpresario = await prisma.eMPRESARIO.create({
+  const senhaHash = await bcrypt.hash(data.senha, 10);
+
+  return await prisma.eMPRESARIO.create({
     data: {
       NOME: data.nome,
       CNPJ: data.cnpj,
       BIO: data.bio || null,
       EMAIL: data.email,
-      SENHA_HASH: data.senha,
+      SENHA_HASH: senhaHash,
       ID_ADM: null
     }
   });

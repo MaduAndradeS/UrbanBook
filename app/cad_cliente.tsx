@@ -17,6 +17,11 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
+<<<<<<< Updated upstream
+=======
+const API_BASE_URL = 'http://10.0.124.8:3333/api';
+
+>>>>>>> Stashed changes
 export default function CadCliente() {
   const router = useRouter();
   const [typeModalVisible, setTypeModalVisible] = useState(false);
@@ -50,7 +55,66 @@ export default function CadCliente() {
       return;
     }
 
+<<<<<<< Updated upstream
     Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+=======
+    try {
+      setCarregando(true);
+
+      const response = await fetch(`${API_BASE_URL}/clientes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          cpf: cpf.trim(),
+          data_nasc: dataNascimento.trim(),
+          email: email.trim(),
+          senha: senha.trim(),
+          rua: rua.trim(),
+          num: Number(numero),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: uf.trim().toUpperCase(),
+          cep: cep.trim(),
+          comp: complemento.trim(),
+          telefone: telefone.trim(),
+        }),
+      });
+
+      const text = await response.text();
+      console.log('RESPOSTA BACKEND:', text);
+
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+  Alert.alert('Erro', 'Resposta inválida do servidor');
+  return;
+}
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.message || 'Não foi possível cadastrar.');
+        return;
+      }
+
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/'),
+        },
+      ]);
+    } catch (error) {
+      Alert.alert(
+        'Erro',
+        'Não foi possível conectar ao servidor. Verifique se o backend está rodando e se o IP está correto.'
+      );
+    } finally {
+      setCarregando(false);
+    }
+>>>>>>> Stashed changes
   }
 
   return (

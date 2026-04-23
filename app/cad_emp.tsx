@@ -17,6 +17,75 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
+<<<<<<< Updated upstream
+=======
+const API_BASE_URL = 'http://10.0.124.8:3333/api';
+
+const categoriasServicos: Record<string, string[]> = {
+  Beleza: [
+    'Cabeleireiro',
+    'Depilação',
+    'Designer',
+    'Barbeiro',
+    'Manicure',
+    'Pedicure',
+    'Podólogo',
+    'Massagem',
+    'Maquiador',
+    'Esteticista',
+  ],
+  'Serviços Gerais': [
+    'Diarista',
+    'Faxineira',
+    'Cozinheira',
+    'Limpeza pós reforma',
+    'Limpeza pré/pós mudança',
+    'Passadeira',
+    'Babá',
+  ],
+  'Manutenção Residencial': [
+    'Eletricista',
+    'Encanador',
+    'Pintor',
+    'Pedreiro',
+    'Marceneiro',
+    'Vidraceiro',
+    'Chaveiro',
+    'Jardineiro',
+  ],
+  Automotivo: [
+    'Mecânico',
+    'Lava rápido',
+    'Funilaria',
+    'Elétrica automotiva',
+  ],
+  Tecnologia: [
+    'Técnico em informática',
+    'Suporte técnico',
+    'Desenvolvimento de sites',
+  ],
+  Educação: [
+    'Professor particular',
+    'Reforço escolar',
+    'Aulas de idioma',
+  ],
+  'Saúde e Bem-estar': [
+    'Personal trainer',
+    'Massagista',
+    'Enfermeira',
+    'Podóloga',
+    'Fisioterapeuta',
+  ],
+  Eventos: [
+    'Fotógrafo',
+    'DJ',
+    'Decorador',
+    'Cerimonialista',
+    'Buffet',
+  ],
+};
+
+>>>>>>> Stashed changes
 export default function App() {
   const router = useRouter();
 

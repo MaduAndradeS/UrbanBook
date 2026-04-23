@@ -30,7 +30,7 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTOS_TRABALHO: true
+      FOTO_TRABALHO: true
     }
   });
 };
@@ -59,7 +59,7 @@ exports.buscarEmpresarioPorId = async (id) => {
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTOS_TRABALHO: true
+      FOTO_TRABALHO: true
     }
   });
 };

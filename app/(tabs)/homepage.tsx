@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,74 +12,295 @@ import {
   View
 } from 'react-native';
 
+type EmpresarioApi = {
+  ID_EMPRESARIO: number;
+  NOME: string;
+  FOTO_PERFIL: string | null;
+  ENDERECO?: Array<{
+    RUA?: string;
+    NUM?: number | null;
+    BAIRRO?: string;
+    CIDADE?: string;
+    ESTADO?: string;
+    CEP?: string;
+    COMP?: string | null;
+  }>;
+  SERVICOS?: Array<{
+    NOME: string;
+  }>;
+};
+
 type CardItem = {
   id: string;
   nome: string;
-  rota: Href;
   categorias: string[];
   endereco: string;
-  imgPerfil: any;
-  imgCapa: any;
+  imgPerfil: string | null;
 };
 
-const dados: CardItem[] = [
-  {
-    id: '1',
-    nome: 'Luiz Serviços Gerais',
-    rota: '/perfil-empresa-cliente',
-    categorias: ['Encanador', 'Eletricista', 'Marceneiro'],
-    endereco: 'Rua Moacir Cavallo, 510 - Centro, Campinas SP',
-    imgPerfil: require('../../assets/images/eletricista1.png'),
-    imgCapa: require('../../assets/images/eletricista2.png')
-  },
-  {
-    id: '2',
-    nome: 'Espaço Julia Martins',
-    rota: '/perfil-empresa-cliente',
-    categorias: ['Cabeleireira', 'Manicure', 'Depilação', 'Design'],
-    endereco: 'Rua Sacramento, 935 - Centro, Campinas SP',
-    imgPerfil: require('../../assets/images/cabeleireiro1.png'),
-    imgCapa: require('../../assets/images/cabeleireiro2.png')
-  },
-  {
-    id: '3',
-    nome: 'Barbearia Arquimedes',
-    rota: '/perfil-empresa-cliente',
-    categorias: ['Barbeiro', 'Cabeleireiro'],
-    endereco: 'Rua Fernando Garna, 29 - Taquaral, Campinas SP',
-    imgPerfil: require('../../assets/images/barbeiro1.png'),
-    imgCapa: require('../../assets/images/barbeiro2.png')
-  },
-  {
-    id: '4',
-    nome: 'Rosana Faxinas',
-    rota: '/perfil-empresa-cliente',
-    categorias: ['Faxina', 'Mudança', 'Pós-Obra'],
-    endereco: 'Avenida Jânio Quadros, 328 - Barão Geraldo, Campinas SP',
-    imgPerfil: require('../../assets/images/limpeza1.png'),
-    imgCapa: require('../../assets/images/limpeza2.png')
-  },
-  {
-    id: '5',
-    nome: 'Espaço Podologia EC',
-    rota: '/perfil-empresa-cliente',
-    categorias: ['Podologia', 'Reflexologia', 'Spa dos Pés'],
-    endereco: 'R. Mal. Deodoro da Fonseca, 1350 - Vila Nova, Campinas SP',
-    imgPerfil: require('../../assets/images/podologia1.png'),
-    imgCapa: require('../../assets/images/podologia2.png')
+function pegarIniciais(nome: string) {
+  if (!nome) return '?';
+
+  const partes = nome
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+
+  if (partes.length === 1) {
+    return partes[0].slice(0, 2).toUpperCase();
   }
-];
+
+  return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+}
+
+function gerarCorPeloNome(nome: string) {
+  const cores = [
+    '#F28B82',
+    '#FBBC04',
+    '#34A853',
+    '#4285F4',
+    '#A142F4',
+    '#FF6D01',
+    '#00ACC1',
+    '#7CB342',
+    '#8E24AA',
+    '#5E35B1',
+    '#EF5350',
+    '#26A69A'
+  ];
+
+  let soma = 0;
+  for (let i = 0; i < nome.length; i++) {
+    soma += nome.charCodeAt(i);
+  }
+
+  return cores[soma % cores.length];
+}
+
+type AvatarPerfilProps = {
+  nome: string;
+  fotoPerfil: string | null;
+  tamanho?: number;
+};
+
+function AvatarPerfil({ nome, fotoPerfil, tamanho = 60 }: AvatarPerfilProps) {
+  if (fotoPerfil) {
+    return (
+      <Image
+        source={{ uri: fotoPerfil }}
+        style={[
+          styles.imgPerfil,
+          {
+            width: tamanho,
+            height: tamanho,
+            borderRadius: tamanho / 2
+          }
+        ]}
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.imgPerfil,
+        styles.imgPlaceholder,
+        {
+          width: tamanho,
+          height: tamanho,
+          borderRadius: tamanho / 2,
+          backgroundColor: gerarCorPeloNome(nome)
+        }
+      ]}
+    >
+      <Text style={styles.avatarTexto}>{pegarIniciais(nome)}</Text>
+    </View>
+  );
+}
 
 export default function HomeCliente() {
   const router = useRouter();
+
+  const [dados, setDados] = useState<CardItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [erro, setErro] = useState('');
+
+  /*
+    Ajuste temporariamente conforme o login real
+  */
+  const tipoUsuario: 'cliente' | 'empresario' = 'cliente';
+  const idEmpresarioLogado: number | null = null;
+
+  const API_URL = 'http://192.168.0.101:3333/api/empresarios';
+
+  useEffect(() => {
+    buscarEmpresarios();
+  }, []);
+
+  async function buscarEmpresarios(modoRefresh = false) {
+    try {
+      if (modoRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      setErro('');
+
+      const response = await fetch(API_URL);
+      const json: EmpresarioApi[] = await response.json();
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar empresas');
+      }
+
+      const formatados: CardItem[] = (json || []).map((item) => {
+        const enderecoObj =
+          item.ENDERECO && item.ENDERECO.length > 0
+            ? item.ENDERECO[0]
+            : undefined;
+
+        const endereco = enderecoObj
+          ? [
+              enderecoObj.RUA,
+              enderecoObj.NUM ? String(enderecoObj.NUM) : null,
+              enderecoObj.BAIRRO,
+              enderecoObj.CIDADE,
+              enderecoObj.ESTADO
+            ]
+              .filter(Boolean)
+              .join(' - ')
+          : 'Endereço não informado';
+
+        return {
+          id: String(item.ID_EMPRESARIO),
+          nome: item.NOME || 'Empresa sem nome',
+          categorias: (item.SERVICOS || []).map((s) => s.NOME),
+          endereco,
+          imgPerfil: item.FOTO_PERFIL || null
+        };
+      });
+
+      setDados(formatados);
+    } catch (error: any) {
+      setErro(error?.message || 'Erro ao carregar empresas');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  function abrirPerfilEmpresa(item: CardItem) {
+    const idClicado = Number(item.id);
+
+    const clicouNaPropriaEmpresa =
+      tipoUsuario === 'empresario' &&
+      idEmpresarioLogado !== null &&
+      idEmpresarioLogado === idClicado;
+
+    if (clicouNaPropriaEmpresa) {
+      router.push('/perfil-empresa');
+      return;
+    }
+
+    router.push({
+      pathname: '/perfil-empresa-cliente',
+      params: { id: item.id }
+    });
+  }
+
+  const conteudo = useMemo(() => {
+    if (loading) {
+      return (
+        <View style={styles.estadoContainer}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text style={styles.estadoTexto}>Carregando empresas...</Text>
+        </View>
+      );
+    }
+
+    if (erro) {
+      return (
+        <View style={styles.estadoContainer}>
+          <Text style={styles.estadoErro}>{erro}</Text>
+          <TouchableOpacity
+            style={styles.botaoRecarregar}
+            onPress={() => buscarEmpresarios()}
+          >
+            <Text style={styles.botaoRecarregarTexto}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (dados.length === 0) {
+      return (
+        <View style={styles.estadoContainer}>
+          <Text style={styles.estadoTexto}>Nenhuma empresa encontrada.</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.lista}>
+        {dados.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.card}
+            onPress={() => abrirPerfilEmpresa(item)}
+          >
+            <View style={styles.cardTop}>
+              <AvatarPerfil
+                nome={item.nome}
+                fotoPerfil={item.imgPerfil}
+                tamanho={60}
+              />
+
+              <View style={styles.info}>
+                <Text style={styles.nome}>{item.nome}</Text>
+
+                <View style={styles.estrelas}>
+                  {[...Array(5)].map((_, i) => (
+                    <Ionicons key={i} name="star" size={14} color="#000" />
+                  ))}
+                </View>
+
+                <View style={styles.tags}>
+                  {item.categorias.length > 0 ? (
+                    item.categorias.map((cat, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>{cat}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <View style={styles.tag}>
+                      <Text style={styles.tagText}>Sem categoria</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <Text style={styles.endereco}>{item.endereco}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }, [dados, erro, loading]);
 
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => buscarEmpresarios(true)}
+          />
+        }
       >
-
         <View style={styles.localizacaoContainer}>
           <View style={styles.localizacao}>
             <Ionicons name="location-outline" size={22} color="#000" />
@@ -84,42 +308,7 @@ export default function HomeCliente() {
           </View>
         </View>
 
-        <View style={styles.lista}>
-          {dados.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.card}
-              /* AQUI CONFIGURA A ROTA, nao entendi se a pagina do pedro tem q ser dinamica com o banco de dados, acho q sim*/
-              onPress={() => router.push(item.rota)}
-            >
-              <View style={styles.cardTop}>
-                <Image source={item.imgPerfil} style={styles.imgPerfil} />
-
-                <View style={styles.info}>
-                  <Text style={styles.nome}>{item.nome}</Text>
-
-                  <View style={styles.estrelas}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons key={i} name="star" size={14} color="#000" />
-                    ))}
-                  </View>
-
-                  <View style={styles.tags}>
-                    {item.categorias.map((cat, index) => (
-                      <View key={index} style={styles.tag}>
-                        <Text style={styles.tagText}>{cat}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-
-                <Image source={item.imgCapa} style={styles.imgCapa} />
-              </View>
-
-              <Text style={styles.endereco}>{item.endereco}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {conteudo}
       </ScrollView>
     </View>
   );
@@ -134,14 +323,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
     paddingHorizontal: 10
-  },
-
-  top: {
-     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    marginTop: 10,
   },
 
   localizacaoContainer: {
@@ -192,6 +373,17 @@ const styles = StyleSheet.create({
     marginRight: 10
   },
 
+  imgPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  avatarTexto: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700'
+  },
+
   info: {
     flex: 1
   },
@@ -224,15 +416,8 @@ const styles = StyleSheet.create({
 
   tagText: {
     fontSize: 11,
-    fontWeight:'500',
+    fontWeight: '500',
     color: '#fff'
-  },
-
-  imgCapa: {
-    width: 70,
-    height: 70,
-    borderRadius: 10,
-    marginLeft: 8
   },
 
   endereco: {
@@ -241,5 +426,36 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '500',
     textAlign: 'center'
+  },
+
+  estadoContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  estadoTexto: {
+    marginTop: 10,
+    fontSize: 15,
+    color: '#333'
+  },
+
+  estadoErro: {
+    fontSize: 15,
+    color: '#b00020',
+    textAlign: 'center',
+    marginBottom: 12
+  },
+
+  botaoRecarregar: {
+    backgroundColor: '#59D6F2',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8
+  },
+
+  botaoRecarregarTexto: {
+    color: '#fff',
+    fontWeight: '600'
   }
 });

@@ -161,16 +161,24 @@ export default function HomeCliente() {
             ? item.ENDERECO[0]
             : undefined;
 
-        const endereco = enderecoObj
-          ? [
-              enderecoObj.RUA,
-              enderecoObj.NUM ? String(enderecoObj.NUM) : null,
-              enderecoObj.BAIRRO,
-              enderecoObj.CIDADE,
-              enderecoObj.ESTADO
-            ]
-              .filter(Boolean)
-              .join(' - ')
+          const endereco = enderecoObj
+            ? [
+          [
+            enderecoObj.RUA,
+            enderecoObj.NUM ? String(enderecoObj.NUM) : null
+          ]
+            .filter(Boolean)
+            .join(', '),
+          [
+            enderecoObj.BAIRRO,
+            enderecoObj.CIDADE
+          ]
+            .filter(Boolean)
+            .join(', '),
+          enderecoObj.ESTADO
+          ]
+          .filter(Boolean)
+          .join(' - ')
           : 'Endereço não informado';
 
         return {

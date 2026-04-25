@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model ADM {
+  ID_ADM     Int          @id @default(autoincrement())
+  EMPRESARIO EMPRESARIO[]
+}
+
+model AGENDAMENTO {
+  CONFIRMACAO    Boolean?
+  DATA_HORA      DateTime    @db.DateTime(0)
+  CANCELAMENTO   Boolean?
+  ID_CLIENTE     Int?
+  ID_EMPRESARIO  Int?
+  ID_AGENDAMENTO Int         @id @default(autoincrement())
+  EMPRESARIO     EMPRESARIO? @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "AGENDAMENTO_ibfk_1")
+  CLIENTE        CLIENTE?    @relation(fields: [ID_CLIENTE], references: [ID_CLIENTE], onDelete: NoAction, onUpdate: NoAction, map: "AGENDAMENTO_ibfk_2")
+
+  @@index([ID_CLIENTE], map: "ID_CLIENTE")
+  @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model CLIENTE {
+  ID_CLIENTE    Int           @id @default(autoincrement())
+  NOME          String        @db.VarChar(100)
+  CPF           String        @unique(map: "CPF") @db.Char(11)
+  DATA_NASC     DateTime      @db.Date
+  EMAIL         String        @unique(map: "EMAIL") @db.VarChar(100)
+  SENHA_HASH    String        @db.VarChar(255)
+  ID_EMPRESARIO Int?
+  FOTO_PERFIL   String?       @db.VarChar(255)
+  AGENDAMENTO   AGENDAMENTO[]
+  EMPRESARIO    EMPRESARIO?   @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "CLIENTE_ibfk_1")
+  ENDERECO      ENDERECO[]
+  TELEFONE      TELEFONE[]
+
+  @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model EMPRESARIO {
+  ID_EMPRESARIO   Int               @id @default(autoincrement())
+  NOME            String            @db.VarChar(100)
+  CNPJ            String            @unique(map: "CNPJ") @db.Char(14)
+  BIO             String?           @db.VarChar(200)
+  EMAIL           String            @unique(map: "EMAIL") @db.VarChar(100)
+  SENHA_HASH      String            @db.VarChar(255)
+  ID_ADM          Int?
+  FOTO_PERFIL     String?           @db.VarChar(255)
+  AGENDAMENTO     AGENDAMENTO[]
+  CLIENTE         CLIENTE[]
+  DISPONIBILIDADE DISPONIBILIDADE[]
+  ADM             ADM?              @relation(fields: [ID_ADM], references: [ID_ADM], onDelete: NoAction, onUpdate: NoAction, map: "EMPRESARIO_ibfk_1")
+  ENDERECO        ENDERECO[]
+  FOTOS_TRABALHO  FOTO_TRABALHO[]
+  SERVICOS        SERVICOS[]
+  TELEFONE        TELEFONE[]
+
+  @@index([ID_ADM], map: "ID_ADM")
+}
+
+model ENDERECO {
+  ID_CLIENTE    Int?
+  ID_EMPRESARIO Int?
+  RUA           String      @db.VarChar(100)
+  NUM           Int?
+  BAIRRO        String      @db.VarChar(100)
+  CIDADE        String      @db.VarChar(100)
+  ESTADO        String      @db.VarChar(2)
+  CEP           String      @db.Char(8)
+  COMP          String?     @db.VarChar(20)
+  ID_ENDERECO   Int         @id @default(autoincrement())
+  EMPRESARIO    EMPRESARIO? @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "ENDERECO_ibfk_1")
+  CLIENTE       CLIENTE?    @relation(fields: [ID_CLIENTE], references: [ID_CLIENTE], onDelete: NoAction, onUpdate: NoAction, map: "ENDERECO_ibfk_2")
+
+  @@index([ID_CLIENTE], map: "ID_CLIENTE")
+  @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model SERVICOS {
+  NOME          String      @db.VarChar(100)
+  ID_EMPRESARIO Int?
+  ID_SERVICO    Int         @id @default(autoincrement())
+  EMPRESARIO    EMPRESARIO? @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "SERVICOS_ibfk_1")
+
+  @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model TELEFONE {
+  ID_CLIENTE    Int?
+  ID_EMPRESARIO Int?
+  TELEFONE      String      @db.Char(14)
+  ID_TELEFONE   Int         @id @default(autoincrement())
+  EMPRESARIO    EMPRESARIO? @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "TELEFONE_ibfk_1")
+  CLIENTE       CLIENTE?    @relation(fields: [ID_CLIENTE], references: [ID_CLIENTE], onDelete: NoAction, onUpdate: NoAction, map: "TELEFONE_ibfk_2")
+
+  @@index([ID_CLIENTE], map: "ID_CLIENTE")
+  @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
+}
+
+model DISPONIBILIDADE {
+  ID_DISP       Int                        @id @default(autoincrement())
+  ID_EMPRESARIO Int
+  DURACAO_MIN   Int?
+  createdAt     DateTime?                  @default(now()) @db.DateTime(0)
+  PERIODOS      String                     @db.Text
+  DIAS_ATIVOS   String                     @db.Text
+  BLOQUEIOS     BLOQUEIO_DISPONIBILIDADE[]
+  EMPRESARIO    EMPRESARIO                 @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_DISPONIBILIDADE_EMPRESARIO")
+
+  @@index([ID_EMPRESARIO], map: "IDX_DISPONIBILIDADE_EMPRESARIO")
+}
+
+model BLOQUEIO_DISPONIBILIDADE {
+  ID_BLOQUEIO      Int             @id @default(autoincrement())
+  ID_DISP          Int
+  HORA_INICIO      String?         @db.VarChar(5)
+  HORA_FIM         String?         @db.VarChar(5)
+  DIA_INDISPONIVEL Boolean         @default(false)
+  MOTIVO           String?         @db.VarChar(100)
+  DISPONIBILIDADE  DISPONIBILIDADE @relation(fields: [ID_DISP], references: [ID_DISP], onDelete: Cascade, map: "FK_BLOQUEIO_DISPONIBILIDADE")
+
+  @@index([ID_DISP], map: "IDX_BLOQUEIO_ID_DISP")
+}
+
+model FOTO_TRABALHO {
+  ID_FOTO       Int        @id @default(autoincrement())
+  URL           String     @db.VarChar(255)
+  ID_EMPRESARIO Int
+  EMPRESARIO    EMPRESARIO @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_FOTO_TRABALHO_EMPRESARIO")
+
+  @@index([ID_EMPRESARIO], map: "IDX_FOTO_TRABALHO_EMPRESARIO")
+}

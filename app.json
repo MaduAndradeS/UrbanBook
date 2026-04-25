@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "UrbanBook",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,6 @@
     "ios": {
       "supportsTablet": true
     },
-
     "web": {
       "output": "static"
     },
@@ -31,6 +30,10 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "CLOUDINARY_CLOUD_NAME": "dtt4ozhmr",
+      "CLOUDINARY_UPLOAD_PRESET": "urbanbook_preset"
     }
   }
 }

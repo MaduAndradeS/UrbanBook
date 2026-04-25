@@ -11,14 +11,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = 'http://192.168.0.225:3333/api';
-
-const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
-const HORARIOS = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'];
 
 export default function PerfilEmpresa() {
   const router = useRouter(); 
@@ -37,10 +33,6 @@ export default function PerfilEmpresa() {
   // ESTADOS DE CONTROLE
   const [loading, setLoading] = useState(false);
   const [loadingInicial, setLoadingInicial] = useState(true);
-  const [modalAgendaVisivel, setModalAgendaVisivel] = useState(false);
-  const [diaSelecionado, setDiaSelecionado] = useState('Seg');
-  const [horaInicio, setHoraInicio] = useState('');
-  const [horaFim, setHoraFim] = useState('');
 
   // 1. DESCOBRIR QUEM É O EMPRESÁRIO LOGADO
   useEffect(() => {
@@ -49,13 +41,13 @@ export default function PerfilEmpresa() {
       if (idSalvo) {
         setIdEmpresario(Number(idSalvo));
       } else {
-        router.replace('/'); // Se não tiver ID, volta pro Login
+        router.replace('/'); 
       }
     }
     pegarId();
   }, []);
 
-  // 2. CARREGAR DADOS (Quando o ID estiver pronto)
+  // 2. CARREGAR DADOS
   useEffect(() => {
     if (idEmpresario) {
       carregarTudo();
@@ -94,28 +86,18 @@ export default function PerfilEmpresa() {
     }
   }
 
-  // FUNÇÕES DE AÇÃO (Usando o ID dinâmico)
-  const handleSalvarHorario = async () => {
-    if (!horaInicio || !horaFim) return Alert.alert('Aviso', 'Selecione os horários');
-    try {
-      const res = await fetch(`${API_URL}/empresarios/disponibilidade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_empresario: idEmpresario, dia_semana: diaSelecionado, hora_inicio: horaInicio, hora_fim: horaFim })
-      });
-      if (res.ok) {
-        const novo = await res.json();
-        setAgenda([...agenda, novo]);
-        setModalAgendaVisivel(false);
-      }
-    } catch (e) { console.log(e); }
-  };
-
+  // 3. EXCLUIR HORÁRIO
   const handleExcluirHorario = async (idDisp: number) => {
-    try {
-      const res = await fetch(`${API_URL}/empresarios/disponibilidade/${idDisp}`, { method: 'DELETE' });
-      if (res.ok) setAgenda(agenda.filter(a => a.ID_DISP !== idDisp));
-    } catch (e) { console.log(e); }
+    Alert.alert("Excluir", "Deseja apagar este horário?", [
+      { text: "Cancelar" },
+      { text: "Sim", onPress: async () => {
+          try {
+            const res = await fetch(`${API_URL}/empresarios/disponibilidade/${idDisp}`, { method: 'DELETE' });
+            if (res.ok) setAgenda(agenda.filter(a => a.ID_DISP !== idDisp));
+          } catch (e) { console.log(e); }
+        }
+      }
+    ]);
   };
 
   if (loadingInicial) {
@@ -140,7 +122,12 @@ export default function PerfilEmpresa() {
         </View>
 
         <View style={styles.content}>
-          <TouchableOpacity style={styles.agendaBtn} onPress={() => setModalAgendaVisivel(true)}>
+          
+          {/* 🟢 AQUI ESTÁ A "ROTA" QUE A DUDINHA QUERIA! */}
+          <TouchableOpacity 
+            style={styles.agendaBtn} 
+            onPress={() => router.push('/Emp_Dispo')}
+          >
             <MaterialCommunityIcons name="calendar-clock" size={24} color="#fff" />
             <Text style={styles.agendaBtnText}>Novo Horário de Atendimento</Text>
           </TouchableOpacity>
@@ -182,17 +169,6 @@ export default function PerfilEmpresa() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Modal de Horários */}
-      <Modal visible={modalAgendaVisivel} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Novo Horário</Text>
-            <TouchableOpacity style={styles.salvarBtn} onPress={handleSalvarHorario}><Text style={styles.salvarBtnText}>Confirmar</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalAgendaVisivel(false)} style={{marginTop: 10, alignItems: 'center'}}><Text>Cancelar</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -224,9 +200,4 @@ const styles = StyleSheet.create({
   description: { color: '#666', lineHeight: 20 },
   portfolioContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   portfolioImg: { width: 100, height: 100, borderRadius: 10, marginRight: 10, marginBottom: 10 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
-  salvarBtn: { backgroundColor: '#67C5C0', padding: 15, borderRadius: 10, alignItems: 'center' },
-  salvarBtnText: { color: '#fff', fontWeight: 'bold' }
 });

@@ -11,6 +11,7 @@ const empresarioController = require('../controllers/empresario.controller');
 router.post('/', upload.single('foto'), empresarioController.criarEmpresario);
 router.get('/', empresarioController.listarEmpresarios);
 router.get('/pendentes', empresarioController.listarEmpresariosPendentes);
+router.post('/login', empresarioController.loginEmpresario);
 
 // --- 2. ROTAS ESPECÍFICAS ---
 router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade);

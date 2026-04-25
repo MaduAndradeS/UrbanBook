@@ -1,5 +1,6 @@
 const empresarioService = require('../services/empresario.service');
 const cloudinary = require('cloudinary').v2;
+const prisma = require('../lib/prisma');
 
 const {
   limparNumeros,
@@ -280,5 +281,32 @@ exports.buscarDisponibilidade = async (req, res) => {
       message: 'Erro ao buscar disponibilidade',
       error: error.message
     });
+  }
+};
+// 🔐 LOGIN DO EMPRESÁRIO
+exports.loginEmpresario = async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    // Busca o empresário no banco (ajuste o SENHA_HASH se vcs usarem outro nome)
+    const empresario = await prisma.eMPRESARIO.findFirst({
+      where: { EMAIL: email, SENHA_HASH: senha } 
+    });
+
+    if (!empresario) {
+      return res.status(401).json({ error: "E-mail ou senha incorretos." });
+    }
+
+    // REGRA DA JÚLIA: Bloquear se não estiver aprovado
+    if (empresario.ID_ADM === null) {
+      return res.status(403).json({ error: "Sua conta ainda não foi aprovada pela administração!" });
+    }
+
+    // Se deu tudo certo, devolve o ID dele
+    return res.status(200).json({ id: empresario.ID_EMPRESARIO, tipo: 'empresario' });
+
+  } catch (error) {
+    console.error("Erro no login:", error);
+    return res.status(500).json({ error: "Erro interno do servidor" });
   }
 };

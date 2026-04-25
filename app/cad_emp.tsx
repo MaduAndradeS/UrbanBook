@@ -17,7 +17,7 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const API_BASE_URL = 'http://192.168.1.8:3333/api';
+const API_BASE_URL = 'http://192.168.0.101:3333/api';
 
 const categoriasServicos: Record<string, string[]> = {
   Beleza: [

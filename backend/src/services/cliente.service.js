@@ -1,8 +1,6 @@
 const prisma = require('../lib/prisma');
 
-// ==============================
-// 🔎 LISTAR CLIENTES COM BUSCA
-// ==============================
+// listar clientes com busca opcional
 exports.listarClientes = async (termoBusca) => {
   return await prisma.cLIENTE.findMany({
     where: {
@@ -21,9 +19,7 @@ exports.listarClientes = async (termoBusca) => {
   });
 };
 
-// ==============================
-// 🎯 BUSCAR CLIENTE POR ID
-// ==============================
+// buscar cliente por id
 exports.buscarClientePorId = async (id) => {
   return await prisma.cLIENTE.findUnique({
     where: {
@@ -36,9 +32,7 @@ exports.buscarClientePorId = async (id) => {
   });
 };
 
-// ==============================
-// ➕ CRIAR CLIENTE (COMPLETO)
-// ==============================
+// criar cliente
 exports.criarCliente = async (data) => {
   // 1. Criar o Cliente com a URL da foto
   const novoCliente = await prisma.cLIENTE.create({

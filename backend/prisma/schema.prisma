@@ -57,7 +57,7 @@ model EMPRESARIO {
   DISPONIBILIDADE DISPONIBILIDADE[]
   ADM             ADM?              @relation(fields: [ID_ADM], references: [ID_ADM], onDelete: NoAction, onUpdate: NoAction, map: "EMPRESARIO_ibfk_1")
   ENDERECO        ENDERECO[]
-  FOTOS_TRABALHO  FOTO_TRABALHO[]
+  FOTO_TRABALHO   FOTO_TRABALHO[]
   SERVICOS        SERVICOS[]
   TELEFONE        TELEFONE[]
 
@@ -103,19 +103,6 @@ model TELEFONE {
   @@index([ID_EMPRESARIO], map: "ID_EMPRESARIO")
 }
 
-model DISPONIBILIDADE {
-  ID_DISP       Int                        @id @default(autoincrement())
-  ID_EMPRESARIO Int
-  DURACAO_MIN   Int?
-  createdAt     DateTime?                  @default(now()) @db.DateTime(0)
-  PERIODOS      String                     @db.Text
-  DIAS_ATIVOS   String                     @db.Text
-  BLOQUEIOS     BLOQUEIO_DISPONIBILIDADE[]
-  EMPRESARIO    EMPRESARIO                 @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_DISPONIBILIDADE_EMPRESARIO")
-
-  @@index([ID_EMPRESARIO], map: "IDX_DISPONIBILIDADE_EMPRESARIO")
-}
-
 model BLOQUEIO_DISPONIBILIDADE {
   ID_BLOQUEIO      Int             @id @default(autoincrement())
   ID_DISP          Int
@@ -126,6 +113,19 @@ model BLOQUEIO_DISPONIBILIDADE {
   DISPONIBILIDADE  DISPONIBILIDADE @relation(fields: [ID_DISP], references: [ID_DISP], onDelete: Cascade, map: "FK_BLOQUEIO_DISPONIBILIDADE")
 
   @@index([ID_DISP], map: "IDX_BLOQUEIO_ID_DISP")
+}
+
+model DISPONIBILIDADE {
+  ID_DISP                  Int                        @id @default(autoincrement())
+  ID_EMPRESARIO            Int
+  DURACAO_MIN              Int?
+  createdAt                DateTime?                  @default(now()) @db.DateTime(0)
+  PERIODOS                 String                     @db.Text
+  DIAS_ATIVOS              String                     @db.Text
+  BLOQUEIO_DISPONIBILIDADE BLOQUEIO_DISPONIBILIDADE[]
+  EMPRESARIO               EMPRESARIO                 @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_DISPONIBILIDADE_EMPRESARIO")
+
+  @@index([ID_EMPRESARIO], map: "IDX_DISPONIBILIDADE_EMPRESARIO")
 }
 
 model FOTO_TRABALHO {

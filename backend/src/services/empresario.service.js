@@ -1,9 +1,9 @@
 const prisma = require('../lib/prisma');
 
-// 🔎 LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
+// listar empresários com busca, categoria e filtro de aprovados
 exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categoria = null) => {
   const termo = termoBusca?.trim() || undefined;
-  const cat = (categoria && categoria !== 'Profissionais') ? categoria : undefined;
+  const cat = categoria && categoria !== 'Profissionais' ? categoria : undefined;
 
   const where = {};
 
@@ -30,12 +30,12 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTOS_TRABALHO: true
+      FOTO_TRABALHO: true
     }
   });
 };
 
-// ⏳ LISTAR EMPRESÁRIOS PENDENTES
+// listar empresários pendentes
 exports.listarEmpresariosPendentes = async () => {
   return await prisma.eMPRESARIO.findMany({
     where: { ID_ADM: null },
@@ -47,7 +47,7 @@ exports.listarEmpresariosPendentes = async () => {
   });
 };
 
-// 🎯 BUSCAR POR ID
+// buscar empresário por id
 exports.buscarEmpresarioPorId = async (id) => {
   return await prisma.eMPRESARIO.findUnique({
     where: { ID_EMPRESARIO: id },
@@ -55,12 +55,12 @@ exports.buscarEmpresarioPorId = async (id) => {
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTOS_TRABALHO: true
+      FOTO_TRABALHO: true
     }
   });
 };
 
-// ➕ CRIAR EMPRESÁRIO
+// criar empresário
 exports.criarEmpresario = async (data) => {
   const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
@@ -69,7 +69,7 @@ exports.criarEmpresario = async (data) => {
       BIO: data.bio || null,
       EMAIL: data.email,
       SENHA_HASH: data.senha,
-      FOTO_PERFIL: data.foto_perfil,
+      FOTO_PERFIL: data.foto_perfil || null,
       ID_ADM: null
     }
   });
@@ -108,51 +108,44 @@ exports.criarEmpresario = async (data) => {
   return await this.buscarEmpresarioPorId(novoEmpresario.ID_EMPRESARIO);
 };
 
-// ✅ APROVAR EMPRESÁRIO (ADM)
+// aprovar empresário
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({
-    where: { ID_EMPRESARIO: idEmpresario },
-    data: { ID_ADM: idAdm },
-    include: {
-      ENDERECO: true,
-      TELEFONE: true,
-      SERVICOS: true
+    where: {
+      ID_EMPRESARIO: idEmpresario
     }
   });
 };
 
-// 📅 SALVAR DISPONIBILIDADE (Onde estava o erro!)
+// salvar disponibilidade
 exports.salvarDisponibilidade = async (dados) => {
   const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
 
   return await prisma.$transaction(async (tx) => {
-    
-    // 1. Remove qualquer configuração de agenda anterior
     await tx.dISPONIBILIDADE.deleteMany({
-      where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
+      where: {
+        ID_EMPRESARIO: Number(ID_EMPRESARIO)
+      }
     });
 
-    // 2. Cria a nova linha (Nomes batendo com o Schema: DURACAO_MIN e sem o campo BLOQUEIOS string)
     const novaDisp = await tx.dISPONIBILIDADE.create({
       data: {
         ID_EMPRESARIO: Number(ID_EMPRESARIO),
         DURACAO_MIN: Number(DURACAO),
-        PERIODOS: PERIODOS,       
+        PERIODOS: PERIODOS,
         DIAS_ATIVOS: DIAS_ATIVOS
       }
     });
 
-    // 3. Se houver bloqueios na string, salvamos na tabela de BLOQUEIO_DISPONIBILIDADE
-    if (BLOQUEIOS && BLOQUEIOS.trim() !== "") {
-      const listaBloqueios = BLOQUEIOS.split(',').map(b => {
-        // Tenta separar "2026-04-20T15:00" em data e hora
+    if (BLOQUEIOS && BLOQUEIOS.trim() !== '') {
+      const listaBloqueios = BLOQUEIOS.split(',').map((b) => {
         const partes = b.split('T');
-        const hora = partes.length > 1 ? partes[1] : b; 
-        
+        const hora = partes.length > 1 ? partes[1] : b;
+
         return {
           ID_DISP: novaDisp.ID_DISP,
           HORA_INICIO: hora,
-          MOTIVO: "Bloqueio Manual"
+          MOTIVO: 'Bloqueio Manual'
         };
       });
 
@@ -165,6 +158,7 @@ exports.salvarDisponibilidade = async (dados) => {
   });
 };
 
+// adicionar foto de trabalho
 exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   return await prisma.fOTO_TRABALHO.create({
     data: {
@@ -174,17 +168,16 @@ exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   });
 };
 
+// buscar disponibilidade por empresário
 exports.buscarDisponibilidadePorId = async (id) => {
   try {
-    // Verifique se o nome aqui é exatamente o que está no seu schema.prisma
-    // Se no seu model for 'DISPONIBILIDADE' em maiúsculas, use tx.dISPONIBILIDADE
     return await prisma.dISPONIBILIDADE.findFirst({
       where: {
-        ID_EMPRESARIO: Number(id) // Garante que o ID é um número
+        ID_EMPRESARIO: Number(id)
       }
     });
   } catch (error) {
-    console.error("Erro no Prisma ao buscar disponibilidade:", error);
-    throw error; // Lança para o controller pegar no catch
+    console.error('Erro no Prisma ao buscar disponibilidade:', error);
+    throw error;
   }
 };

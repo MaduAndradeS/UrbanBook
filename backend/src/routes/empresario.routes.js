@@ -1,31 +1,38 @@
 const express = require('express');
-const router = express.Router(); 
+const router = express.Router();
 const multer = require('multer');
-const storage = require('../services/cloudinary'); 
+const storage = require('../services/cloudinary');
 const upload = multer({ storage });
-const prisma = require('../lib/prisma'); 
+const prisma = require('../lib/prisma');
 
 const empresarioController = require('../controllers/empresario.controller');
 
-// --- 1. ROTAS DE CRIAÇÃO E LISTAGEM GERAL ---
+// --- 1. CRIAÇÃO E LISTAGEM ---
 router.post('/', upload.single('foto'), empresarioController.criarEmpresario);
 router.get('/', empresarioController.listarEmpresarios);
 router.get('/pendentes', empresarioController.listarEmpresariosPendentes);
 
-// --- 2. ROTAS ESPECÍFICAS (Devem vir ANTES das rotas com :id genérico) ---
-// Se colocar o /:id em cima desta, o Express nunca chegará aqui.
-router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade); 
+// --- 2. ROTAS ESPECÍFICAS ---
+router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade);
 router.post('/disponibilidade', empresarioController.configurarDisponibilidade);
 router.patch('/:id/aprovar', empresarioController.aprovarEmpresario);
 
-// --- 3. ROTAS DE BUSCA POR ID (Genéricas) ---
+//  BUSCA GENÉRICA ---
 router.get('/:id', empresarioController.buscarEmpresarioPorId);
 
-// --- 4. ATUALIZAÇÕES DE PERFIL E PORTFÓLIO ---
+// FOTO PERFIL 
 router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.body;
-    if (!req.file) return res.status(400).json({ erro: "Nenhuma foto enviada" });
+
+    if (!id) {
+      return res.status(400).json({ erro: 'ID do empresário é obrigatório' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ erro: 'Nenhuma foto enviada' });
+    }
+
     const urlCloudinary = req.file.path;
 
     const empresario = await prisma.eMPRESARIO.update({
@@ -34,16 +41,26 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
     });
 
     return res.json(empresario);
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ erro: "Erro ao atualizar foto do empresário" });
+    return res.status(500).json({ erro: 'Erro ao atualizar foto do empresário' });
   }
 });
 
+// FOTO TRABALHO 
 router.post('/trabalhos/fotos', upload.single('foto'), async (req, res) => {
   try {
     const { id_empresario } = req.body;
-    if (!req.file) return res.status(400).json({ erro: "Nenhuma foto enviada" });
+
+    if (!id_empresario) {
+      return res.status(400).json({ erro: 'ID do empresário é obrigatório' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ erro: 'Nenhuma foto enviada' });
+    }
+
     const urlCloudinary = req.file.path;
 
     const novaFoto = await prisma.fOTO_TRABALHO.create({
@@ -54,9 +71,10 @@ router.post('/trabalhos/fotos', upload.single('foto'), async (req, res) => {
     });
 
     return res.status(201).json(novaFoto);
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ erro: "Erro ao subir foto do trabalho" });
+    return res.status(500).json({ erro: 'Erro ao subir foto do trabalho' });
   }
 });
 

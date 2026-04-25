@@ -22,8 +22,12 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.body;
 
+    if (!id) {
+      return res.status(400).json({ erro: 'ID do cliente é obrigatório' });
+    }
+
     if (!req.file) {
-      return res.status(400).json({ erro: "Nenhuma foto enviada" });
+      return res.status(400).json({ erro: 'Nenhuma foto enviada' });
     }
 
     const urlCloudinary = req.file.path;
@@ -37,7 +41,7 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ erro: "Erro ao atualizar foto do cliente" });
+    return res.status(500).json({ erro: 'Erro ao atualizar foto do cliente' });
   }
 });
 

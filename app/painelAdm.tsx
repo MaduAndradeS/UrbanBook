@@ -1,17 +1,17 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+const API_BASE_URL = '172.20.10.2:3333/api';
 const ID_ADM_FIXO = 1;
 
 type Empresario = {

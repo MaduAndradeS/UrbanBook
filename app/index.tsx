@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+const API_BASE_URL = 'http://172.20.10.2:3333/api';
 
 export default function App() {
   const router = useRouter();

@@ -1,315 +1,394 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { Calendar, DateData } from 'react-native-calendars';
 import { API_URL } from '../config/api';
 
-export default function Cliente_Datas() {
-  const params = useLocalSearchParams();
-  const idEmpresario = params.id;
+type Periodo = {
+  inicio: Date;
+  fim: Date;
+};
 
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<any>(null);
+export default function Disponibilidade() {
+  const [duracao, setDuracao] = useState<number>(30); 
+
+  const [periodos, setPeriodos] = useState<Periodo[]>([
+    { inicio: new Date(), fim: new Date() }
+  ]);
+
+  const [showPicker, setShowPicker] = useState<boolean>(false);
+  const [tipoPicker, setTipoPicker] = useState<'inicio' | 'fim'>('inicio');
+  const [periodoIndex, setPeriodoIndex] = useState<number>(0);
+
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
-  const [horaSelecionada, setHoraSelecionada] = useState<string | null>(null);
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
-  const [ocupados, setOcupados] = useState<string[]>([]);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [diasAtivos, setDiasAtivos] = useState<Record<string, boolean>>({});
+  const [horariosPorDia, setHorariosPorDia] = useState<Record<string, string[]>>({});
+  const [bloqueados, setBloqueados] = useState<Record<string, string[]>>({});
+  
+  const [carregando, setCarregando] = useState<boolean>(false);
 
-  useEffect(() => {
-    fetchConfig();
-  }, [idEmpresario]);
+  // Data de hoje para travar o calendário
+  const hoje = new Date().toISOString().split('T')[0];
 
-  useEffect(() => {
-    if (diaSelecionado && config) {
-      gerarGradeHorarios();
-      buscarOcupados();
-    }
-  }, [diaSelecionado]);
-
-  async function fetchConfig() {
-    try {
-      const response = await fetch(`${API_URL}/empresarios/${idEmpresario}/disponibilidade`);
-      const data = await response.json();
-      setConfig(data);
-    } catch (error) {
-      Alert.alert("Erro", "Não foi possível carregar a agenda.");
-    } finally {
-      setLoading(false);
-    }
+  function formatarHora(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   }
 
-  async function buscarOcupados() {
-    try {
-      const response = await fetch(`${API_URL}/agendamentos/check?id=${idEmpresario}&data=${diaSelecionado}`);
-      const data = await response.json();
-      setOcupados(data.horasOcupadas || []);
-    } catch (e) {
-      setOcupados([]);
-    }
+  function toMin(date: Date): number {
+    return date.getHours() * 60 + date.getMinutes();
   }
 
-  async function confirmarAgendamento() {
+  function gerarHorarios(dia: string) {
+    const set = new Set<string>();
+
+    periodos.forEach((p: Periodo) => {
+      const inicio = toMin(p.inicio);
+      const fim = toMin(p.fim);
+
+      if (inicio >= fim) return; 
+
+      let t = inicio;
+
+      while (t + duracao <= fim) {
+        const h = Math.floor(t / 60);
+        const m = t % 60;
+
+        const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        set.add(horario);
+
+        t += duracao;
+      }
+    });
+
+    setHorariosPorDia(prev => ({
+      ...prev,
+      [dia]: Array.from(set)
+    }));
+  }
+
+  async function salvarAgenda() {
+    setCarregando(true);
     try {
-      const response = await fetch(`${API_URL}/agendamentos`, {
+      const periodosString = periodos.map(p => `${formatarHora(p.inicio)}-${formatarHora(p.fim)}`).join(',');
+      const diasAtivosString = Object.keys(diasAtivos).filter(d => diasAtivos[d]).join(',');
+      const bloqueiosString = Object.entries(bloqueados).flatMap(([dia, horas]) => horas.map(h => `${dia}T${h}`)).join(',');
+
+      const response = await fetch(`${API_URL}/empresarios/disponibilidade`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ID_CLIENTE: 1, 
-          ID_EMPRESARIO: idEmpresario,
-          DATA_HORA: `${diaSelecionado}T${horaSelecionada}:00`
+          ID_EMPRESARIO: 1, 
+          DURACAO: duracao,
+          PERIODOS: periodosString,
+          DIAS_ATIVOS: diasAtivosString,
+          BLOQUEIOS: bloqueiosString
         })
       });
 
       if (response.ok) {
-        setModalVisible(false);
-        setSucesso(true);
-        buscarOcupados();
+        Alert.alert("Sucesso", "Configurações de agenda salvas!");
+      } else {
+        Alert.alert("Erro", "Erro ao salvar no servidor.");
       }
-    } catch (error) {
-      Alert.alert("Erro", "Erro ao processar agendamento.");
+    } catch (e) {
+      Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+    } finally {
+      setCarregando(false);
     }
   }
 
-  function gerarGradeHorarios() {
-    if (!config?.PERIODOS) return;
+  function abrirPicker(index: number, tipo: 'inicio' | 'fim') {
+    setPeriodoIndex(index);
+    setTipoPicker(tipo);
+    setShowPicker(true);
+  }
 
-    const lista: string[] = [];
-    const duracao = config.DURACAO_MIN || 30;
-    const periodos = config.PERIODOS.split(',');
-
-    periodos.forEach((p: string) => {
-      const [inicio, fim] = p.split('-');
-      let atual = timeToMin(inicio);
-      const limite = timeToMin(fim);
-
-      while (atual + duracao <= limite) {
-        lista.push(minToTime(atual));
-        atual += duracao;
-      }
+  const alterarDuracao = (valor: number) => {
+    setDuracao(prev => {
+      const novo = prev + valor;
+      return novo > 0 ? novo : 5; 
     });
-    setHorariosDisponiveis(lista);
-  }
-
-  const timeToMin = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
   };
-
-  const minToTime = (min: number) => {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const marked: any = {};
-  if (config?.DIAS_ATIVOS) {
-    config.DIAS_ATIVOS.split(',').forEach((data: string) => {
-      marked[data] = { marked: true, dotColor: '#67C5C0' };
-    });
-  }
-
-  if (diaSelecionado) {
-    marked[diaSelecionado] = {
-      ...marked[diaSelecionado],
-      selected: true,
-      selectedColor: '#000'
-    };
-  }
-
-  if (loading || !config) {
-    return (
-      <View style={styles.loadingCenter}>
-        <ActivityIndicator size="large" color="#67C5C0" />
-        <Text style={{ marginTop: 10 }}>Carregando agenda...</Text>
-      </View>
-    );
-  }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.perfil}>
-        <Ionicons name="person-circle" size={60} color="#ccc" />
-        <View style={{ marginLeft: 12 }}>
-          <Text style={styles.nome}>{params.nome || 'Profissional'}</Text>
-          <Text style={styles.subNome}>Campinas - SP</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+
+      <Text style={styles.titulo}>Configuração</Text>
+
+      <Text style={styles.subtitulo}>Duração do Atendimento</Text>
+      
+      <View style={styles.contadorContainer}>
+        <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(-5)}>
+          <Text style={styles.txtContador}>-</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.displayContador}>
+          <Text style={styles.txtDuracaoDisplay}>
+            {Math.floor(duracao / 60) > 0 ? `${Math.floor(duracao / 60)}h ` : ""}
+            {duracao % 60}min
+          </Text>
         </View>
+
+        <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(5)}>
+          <Text style={styles.txtContador}>+</Text>
+        </TouchableOpacity>
       </View>
 
-      <Text style={styles.titulo}>Selecione uma data</Text>
-      
+      <Text style={styles.subtitulo}>Horário de Funcionamento</Text>
+
+      {periodos.map((p: Periodo, i: number) => (
+        <View key={`${p.inicio}-${p.fim}-${i}`} style={styles.periodo}>
+
+          <TouchableOpacity
+            onPress={() => abrirPicker(i, 'inicio')}
+            style={styles.timeBtn}
+          >
+            <Text>Início: {formatarHora(p.inicio)}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => abrirPicker(i, 'fim')}
+            style={styles.timeBtn}
+          >
+            <Text>Fim: {formatarHora(p.fim)}</Text>
+          </TouchableOpacity>
+
+        </View>
+      ))}
+
+      <TouchableOpacity
+        onPress={() =>
+          setPeriodos((prev: Periodo[]) => [
+            ...prev,
+            { inicio: new Date(), fim: new Date() }
+          ])
+        }
+      >
+        <Text style={{ marginTop: 15, color: '#007AFF', fontWeight: 'bold' }}>+ Adicionar Horário</Text>
+      </TouchableOpacity>
+
       <Calendar
-        minDate={new Date().toISOString().split('T')[0]}
-        markedDates={marked}
-        onDayPress={(day) => {
-          if (config?.DIAS_ATIVOS?.includes(day.dateString)) {
-            setDiaSelecionado(day.dateString);
-            setHoraSelecionada(null);
+        minDate={hoje}
+        theme={{
+          textDisabledColor: '#d9e1e8',
+          todayTextColor: '#007AFF',
+          selectedDayBackgroundColor: '#000',
+        }}
+        style={{ marginTop: 20, borderRadius: 10, elevation: 2 }}
+        onDayPress={(day: DateData) => {
+          const dia = day.dateString;
+          
+          if (dia < hoje) return;
+
+          const novoEstado = !diasAtivos[dia]; 
+          setDiasAtivos(prev => ({ ...prev, [dia]: novoEstado }));
+          setDiaSelecionado(dia);
+
+          if (novoEstado) {
+            gerarHorarios(dia);
           } else {
-            Alert.alert("Indisponível", "O profissional não atende nesta data.");
+            setHorariosPorDia(prev => {
+              const copy = { ...prev };
+              delete copy[dia];
+              return copy;
+            });
+            setBloqueados(prev => {
+              const copy = { ...prev };
+              delete copy[dia];
+              return copy;
+            });
           }
         }}
-        theme={{
-          todayTextColor: '#67C5C0',
-          selectedDayBackgroundColor: '#000',
-          arrowColor: '#67C5C0',
-        }}
+        markedDates={Object.fromEntries(
+          Object.entries(diasAtivos)
+            .filter(([_, ativo]) => ativo)
+            .map(([dia]) => [dia, { selected: true, selectedColor: '#000' }])
+        )}
       />
 
-      <Text style={styles.titulo}>Horários para {diaSelecionado || '...'}</Text>
+      {diaSelecionado && diasAtivos[diaSelecionado] && (
+        <>
+          <Text style={styles.subtitulo}>Horários de {diaSelecionado} (Toque para bloquear)</Text>
+          <View style={styles.lista}>
+            {(horariosPorDia[diaSelecionado] || []).map((h: string) => {
+              const bloqueado = bloqueados[diaSelecionado]?.includes(h);
+              return (
+                <TouchableOpacity
+                  key={h}
+                  onPress={() => {
+                    setBloqueados(prev => {
+                      const lista = prev[diaSelecionado] ?? [];
+                      return {
+                        ...prev,
+                        [diaSelecionado]: lista.includes(h)
+                          ? lista.filter((x: string) => x !== h)
+                          : [...lista, h]
+                      };
+                    });
+                  }}
+                  style={[styles.horario, { backgroundColor: bloqueado ? '#ccc' : '#000' }]}
+                >
+                  <Text style={{ color: '#fff' }}>{h}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      )}
 
-      <View style={styles.gridHorarios}>
-        {horariosDisponiveis.map((hora) => {
-          const isOcupado = ocupados.includes(hora);
-          return (
-            <TouchableOpacity
-              key={hora}
-              disabled={isOcupado}
-              onPress={() => {
-                setHoraSelecionada(hora);
-                setModalVisible(true);
+      <TouchableOpacity 
+        style={styles.btnSalvarGeral} 
+        onPress={salvarAgenda}
+        disabled={carregando}
+      >
+        {carregando ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>SALVAR AGENDA</Text>
+        )}
+      </TouchableOpacity>
+
+      {showPicker && (
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerBox}>
+            <Text style={styles.pickerTitle}>
+              {tipoPicker === 'inicio' ? 'Selecionar início' : 'Selecionar fim'}
+            </Text>
+            <DateTimePicker
+              value={periodos[periodoIndex][tipoPicker]}
+              mode="time"
+              is24Hour
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                if (event.type === 'dismissed' || !selectedDate) {
+                  setShowPicker(false);
+                  return;
+                }
+                setPeriodos((prev) => {
+                  const copy = [...prev];
+                  copy[periodoIndex] = { ...copy[periodoIndex], [tipoPicker]: selectedDate };
+                  return copy;
+                });
               }}
-              style={[
-                styles.cardHorario,
-                { backgroundColor: isOcupado ? '#F0F0F0' : (horaSelecionada === hora ? '#000' : '#67C5C0') }
-              ]}
-            >
-              <Text style={{ color: isOcupado ? '#CCC' : '#FFF', fontWeight: 'bold' }}>
-                {hora}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <Modal transparent visible={modalVisible} animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Confirmar Agendamento?</Text>
-            <Text style={styles.modalInfo}>Data: {diaSelecionado}</Text>
-            <Text style={styles.modalInfo}>Horário: {horaSelecionada}</Text>
-            <View style={styles.areaBotoes}>
-              <TouchableOpacity style={styles.btnVoltar} onPress={() => setModalVisible(false)}>
-                <Text>Voltar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnConfirmar} onPress={confirmarAgendamento}>
-                <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal transparent visible={sucesso} animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.modalBox}>
-            <Ionicons name="checkmark-circle" size={50} color="#67C5C0" style={{ alignSelf: 'center' }} />
-            <Text style={[styles.modalTitle, { textAlign: 'center', marginTop: 10 }]}>Tudo certo!</Text>
-            <TouchableOpacity style={[styles.btnConfirmar, { width: '100%', marginTop: 20 }]} onPress={() => setSucesso(false)}>
-              <Text style={{ color: '#FFF' }}>OK</Text>
+            />
+            <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
+              <Text style={{ color: '#fff' }}>Concluir</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FFF', 
-    padding: 20 
+  container: {
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: '#ffffff'
   },
-  loadingCenter: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#FFF' 
+  titulo: {
+    fontSize: 20,
+    fontWeight: 'bold'
   },
-  perfil: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 25, 
-    marginTop: 10 
+  subtitulo: {
+    marginTop: 20,
+    fontWeight: 'bold'
   },
-  nome: { 
-    fontSize: 20, 
-    fontWeight: 'bold' 
+  contadorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    marginTop: 10,
+    padding: 5
   },
-  subNome: { 
-    fontSize: 14, 
-    color: '#666' 
+  btnContador: {
+    backgroundColor: '#000',
+    width: 45,
+    height: 45,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  titulo: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    marginVertical: 15 
+  txtContador: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold'
   },
-  gridHorarios: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    gap: 10, 
-    marginBottom: 40 
+  displayContador: {
+    flex: 1,
+    alignItems: 'center'
   },
-  cardHorario: { 
-    paddingVertical: 12, 
-    paddingHorizontal: 15, 
-    borderRadius: 10, 
-    minWidth: 85, 
-    alignItems: 'center' 
+  txtDuracaoDisplay: {
+    fontSize: 18,
+    fontWeight: '600'
   },
-  overlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.6)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  periodo: {
+    marginTop: 10
   },
-  modalBox: { 
-    width: '85%', 
-    backgroundColor: '#FFF', 
-    borderRadius: 20, 
-    padding: 25 
+  timeBtn: {
+    padding: 12,
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    marginTop: 8
   },
-  modalTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    marginBottom: 15 
+  lista: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10
   },
-  modalInfo: { 
-    fontSize: 16, 
-    marginBottom: 5, 
-    color: '#444' 
+  horario: {
+    padding: 10,
+    borderRadius: 10
   },
-  areaBotoes: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginTop: 25 
+  btnSalvarGeral: {
+    marginTop: 40,
+    backgroundColor: '#000',
+    padding: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 30
   },
-  btnVoltar: { 
-    backgroundColor: '#EEE', 
-    padding: 15, 
-    borderRadius: 12, 
-    width: '45%', 
-    alignItems: 'center' 
+  pickerOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
   },
-  btnConfirmar: { 
-    backgroundColor: '#67C5C0', 
-    padding: 15, 
-    borderRadius: 12, 
-    width: '45%', 
-    alignItems: 'center' 
+  pickerBox: {
+    width: '90%',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center'
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#000'
+  },
+  doneButton: {
+    marginTop: 20,
+    backgroundColor: '#000',
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center'
   }
 });

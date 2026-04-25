@@ -132,7 +132,7 @@ export default function HomeCliente() {
   const tipoUsuario: 'cliente' | 'empresario' = 'cliente';
   const idEmpresarioLogado: number | null = null;
 
-  const API_URL = 'http://192.168.0.101:3333/api/empresarios';
+  const API_URL = 'http://172.20.10.2:3333/api/empresarios';
 
   useEffect(() => {
     buscarEmpresarios();

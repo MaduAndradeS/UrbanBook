@@ -1,3 +1,4 @@
+import logo from '@/assets/images/logo.png';
 import { useState } from 'react';
 import {
   Image,
@@ -69,10 +70,19 @@ export default function PerfilUsuarioScreen() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Avatar + Nome */}
-        <View style={s.profileHeader}>
-          <Image source={{ uri: usuario.foto }} style={s.avatarGrande} />
-          <Text style={s.userName}>{usuario.nome}</Text>
+        {/* ── Header (estilo PerfilCliente) ── */}
+        <View style={s.headerContainer}>
+          <Text style={s.header}>Urban Book</Text>
+          <Image source={logo} style={s.topIcon} />
+        </View>
+
+        {/* ── Perfil: avatar centralizado + nome + editar ── */}
+        <View style={s.profile}>
+          <Image source={{ uri: usuario.foto }} style={s.avatar} />
+          <Text style={s.name}>{usuario.nome}</Text>
+          <TouchableOpacity>
+            <Text style={s.editP}>Editar</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Avaliações */}
@@ -129,29 +139,46 @@ const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scroll:   { flex: 1, paddingHorizontal: 20 },
 
-  topHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 16, marginBottom: 20,
+  // ── Top (PerfilCliente) ──
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 50,
+    marginBottom: 4,
   },
-  brandName: { fontSize: 20, color: '#999', fontWeight: '400' },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: 8,
-    borderWidth: 1, borderColor: '#ddd',
-    alignItems: 'center', justifyContent: 'center',
+  header: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: 'gray',
   },
-  iconBtnText: { fontSize: 18 },
+  topIcon: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
+    backgroundColor: 'transparent',
+  },
+  profile: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  name: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginTop: 10,
+  },
+  editP: {
+    marginTop: 5,
+    color: 'gray',
+  },
 
-  profileHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 16, marginBottom: 28,
-  },
-  avatarGrande: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#eee',
-  },
-  userName: { fontSize: 22, fontWeight: 'bold', color: '#111', flex: 1, flexWrap: 'wrap' },
-
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 10 },
+  // ── Resto (perfil-usuario) ──
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 10, marginTop: 10 },
 
   avaliacaoCard: {
     flexDirection: 'row', gap: 10,
@@ -187,4 +214,5 @@ const s = StyleSheet.create({
   },
   enderecoInputAtivo: {
     borderColor: '#67C5C0', backgroundColor: '#fff',
-  },});
+  },
+});

@@ -48,7 +48,7 @@ type ResultadoEndereco = {
   longitude: number;
 };
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+import { API_URL } from '../../config/api';
 
 function pegarIniciais(nome: string) {
   if (!nome) return '?';
@@ -193,7 +193,7 @@ export default function HomeCliente() {
       setErro('');
 
       const response = await fetch(
-        `${API_BASE_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=10`
+        `${API_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=10`
       );
 
       const json: EmpresarioApi[] = await response.json();
@@ -250,7 +250,7 @@ export default function HomeCliente() {
       setResultadoEndereco([]);
 
       const response = await fetch(
-        `${API_BASE_URL}/localizacao/buscar?endereco=${encodeURIComponent(
+        `${API_URL}/localizacao/buscar?endereco=${encodeURIComponent(
           textoEndereco
         )}`
       );

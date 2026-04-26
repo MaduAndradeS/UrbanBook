@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
 
-// 🔎 LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
+//  LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
 exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categoria = null) => {
   const termo = termoBusca?.trim() || undefined;
   const cat = (categoria && categoria !== 'Profissionais') ? categoria : undefined;
@@ -36,7 +36,7 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
   });
 };
 
-// ⏳ LISTAR EMPRESÁRIOS PENDENTES
+//  LISTAR EMPRESÁRIOS PENDENTES
 exports.listarEmpresariosPendentes = async () => {
   return await prisma.eMPRESARIO.findMany({
     where: { ID_ADM: null },
@@ -48,7 +48,7 @@ exports.listarEmpresariosPendentes = async () => {
   });
 };
 
-// 🎯 BUSCAR POR ID
+//  BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (id) => {
   return await prisma.eMPRESARIO.findUnique({
     where: { ID_EMPRESARIO: id },
@@ -121,7 +121,7 @@ exports.criarEmpresario = async (data) => {
   return await this.buscarEmpresarioPorId(novoEmpresario.ID_EMPRESARIO);
 };
 
-// ✅ APROVAR EMPRESÁRIO (ADM) - Correção essencial do Pedro aplicada aqui
+//  APROVAR EMPRESÁRIO (ADM) - Correção essencial do Pedro aplicada aqui
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({
     where: {
@@ -139,7 +139,7 @@ exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   });
 };
 
-// 📅 SALVAR DISPONIBILIDADE 
+// SALVAR DISPONIBILIDADE 
 exports.salvarDisponibilidade = async (dados) => {
   const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
 

@@ -17,7 +17,8 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+import { API_URL } from '../config/api';
+
 
 const categoriasServicos: Record<string, string[]> = {
   Beleza: [
@@ -194,7 +195,7 @@ export default function App() {
         servicos: selectedServices,
       };
 
-      const response = await fetch(`${API_BASE_URL}/empresarios`, {
+      const response = await fetch(`${API_URL}/empresarios`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

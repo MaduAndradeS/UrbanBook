@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
   res.send('API UrbanBook funcionando');
 });
 
-// 📌 módulos da API
+//  módulos da API
 router.use('/clientes', clienteRoutes);
 router.use('/empresarios', empresarioRoutes);
 router.use('/auth', authRoutes);

@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -5,6 +6,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +23,7 @@ const API_BASE_URL = 'http://192.168.0.101:3333/api';
 
 export default function CadCliente() {
   const router = useRouter();
+
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState('Cliente');
   const [carregando, setCarregando] = useState(false);
@@ -29,7 +32,9 @@ export default function CadCliente() {
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [dataNascimento, setDataNascimento] = useState('');
+  const [dataNascimento, setDataNascimento] = useState<Date | null>(null);
+  const [mostrarPicker, setMostrarPicker] = useState(false);
+
   const [cep, setCep] = useState('');
   const [numero, setNumero] = useState('');
   const [rua, setRua] = useState('');
@@ -38,30 +43,57 @@ export default function CadCliente() {
   const [uf, setUf] = useState('');
   const [complemento, setComplemento] = useState('');
   const [telefone, setTelefone] = useState('');
-  async function buscarCep(cepDigitado: string) {
-  const cepLimpo = cepDigitado.replace(/\D/g, '');
 
-  if (cepLimpo.length !== 8) {
-    return;
+  function formatarDataTela(data: Date | null) {
+    if (!data) return 'Selecionar data';
+    return data.toLocaleDateString('pt-BR');
   }
 
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-    const data = await response.json();
+  function formatarDataBackend(data: Date) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
 
-    if (data.erro) {
-      Alert.alert('Atenção', 'CEP não encontrado.');
+    return `${ano}-${mes}-${dia}`;
+  }
+
+  function calcularIdade(data: Date) {
+    const hoje = new Date();
+
+    let idade = hoje.getFullYear() - data.getFullYear();
+    const mes = hoje.getMonth() - data.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoje.getDate() < data.getDate())) {
+      idade--;
+    }
+
+    return idade;
+  }
+
+  async function buscarCep(cepDigitado: string) {
+    const cepLimpo = cepDigitado.replace(/\D/g, '');
+
+    if (cepLimpo.length !== 8) {
       return;
     }
 
-    setRua(data.logradouro || '');
-    setBairro(data.bairro || '');
-    setCidade(data.localidade || '');
-    setUf(data.uf || '');
-  } catch (error) {
-    Alert.alert('Erro', 'Não foi possível buscar o CEP.');
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        Alert.alert('Atenção', 'CEP não encontrado.');
+        return;
+      }
+
+      setRua(data.logradouro || '');
+      setBairro(data.bairro || '');
+      setCidade(data.localidade || '');
+      setUf(data.uf || '');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível buscar o CEP.');
+    }
   }
-}
 
   async function validarCadastro() {
     if (
@@ -69,7 +101,7 @@ export default function CadCliente() {
       !cpf.trim() ||
       !email.trim() ||
       !senha.trim() ||
-      !dataNascimento.trim() ||
+      !dataNascimento ||
       !cep.trim() ||
       !numero.trim() ||
       !rua.trim() ||
@@ -81,6 +113,7 @@ export default function CadCliente() {
       Alert.alert('Atenção', 'Preencha todos os campos obrigatórios.');
       return;
     }
+
     if (calcularIdade(dataNascimento) < 18) {
       Alert.alert('Atenção', 'É necessário ter pelo menos 18 anos para se cadastrar.');
       return;
@@ -97,7 +130,7 @@ export default function CadCliente() {
         body: JSON.stringify({
           nome: nome.trim(),
           cpf: cpf.trim(),
-          data_nasc: dataNascimento.trim(),
+          data_nasc: formatarDataBackend(dataNascimento),
           email: email.trim(),
           senha: senha.trim(),
           rua: rua.trim(),
@@ -133,19 +166,6 @@ export default function CadCliente() {
       setCarregando(false);
     }
   }
-  function calcularIdade(dataNascimento: string) {
-  const hoje = new Date();
-  const nascimento = new Date(dataNascimento);
-
-  let idade = hoje.getFullYear() - nascimento.getFullYear();
-  const mes = hoje.getMonth() - nascimento.getMonth();
-
-  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
-    idade--;
-  }
-
-  return idade;
-}
 
   return (
     <>
@@ -174,11 +194,7 @@ export default function CadCliente() {
           </TouchableOpacity>
 
           <Text style={styles.label}>Nome</Text>
-          <TextInput
-            style={styles.input}
-            value={nome}
-            onChangeText={setNome}
-          />
+          <TextInput style={styles.input} value={nome} onChangeText={setNome} />
 
           <Text style={styles.label}>CPF</Text>
           <TextInput
@@ -206,13 +222,49 @@ export default function CadCliente() {
           />
 
           <Text style={styles.label}>Data de nascimento</Text>
-          <TextInput
-            style={styles.input}
-            value={dataNascimento}
-            onChangeText={setDataNascimento}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor="#888"
-          />
+
+          {Platform.OS === 'ios' ? (
+            <View style={styles.inputDateIos}>
+              <DateTimePicker
+                value={dataNascimento || new Date(2000, 0, 1)}
+                mode="date"
+                display="compact"
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setDataNascimento(selectedDate);
+                  }
+                }}
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setMostrarPicker(true)}
+              >
+                <Text style={dataNascimento ? styles.dataTexto : styles.placeholderData}>
+                  {formatarDataTela(dataNascimento)}
+                </Text>
+              </TouchableOpacity>
+
+              {mostrarPicker && (
+                <DateTimePicker
+                  value={dataNascimento || new Date(2000, 0, 1)}
+                  mode="date"
+                  display="default"
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setMostrarPicker(false);
+
+                    if (selectedDate) {
+                      setDataNascimento(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </>
+          )}
 
           <Text style={styles.label}>Telefone</Text>
           <TextInput
@@ -251,18 +303,10 @@ export default function CadCliente() {
           </View>
 
           <Text style={styles.label}>Rua</Text>
-          <TextInput
-            style={styles.input}
-            value={rua}
-            onChangeText={setRua}
-          />
+          <TextInput style={styles.input} value={rua} onChangeText={setRua} />
 
           <Text style={styles.label}>Bairro</Text>
-          <TextInput
-            style={styles.input}
-            value={bairro}
-            onChangeText={setBairro}
-          />
+          <TextInput style={styles.input} value={bairro} onChangeText={setBairro} />
 
           <View style={styles.row}>
             <View style={styles.inputCityContainer}>
@@ -429,6 +473,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#eaeaea',
     padding: 12,
     borderRadius: 10,
+  },
+
+  inputDateIos: {
+    backgroundColor: '#eaeaea',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'flex-start',
+  },
+
+  dataTexto: {
+    color: '#000',
+  },
+
+  placeholderData: {
+    color: '#888',
   },
 
   row: {

@@ -25,6 +25,20 @@ const apagarImagemCloudinary = async (req) => {
   }
 };
 
+function calcularIdade(dataNascimento) {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
+
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+
+  return idade;
+}
+
 // listar clientes com busca opcional
 exports.listarClientes = async (req, res) => {
   try {
@@ -90,10 +104,17 @@ exports.criarCliente = async (req, res) => {
       !estado ||
       !cep ||
       !telefone
-    ) {
+    ) 
+    {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
+      });
+    }
+    if (calcularIdade(data_nasc) < 18) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'É necessário ter pelo menos 18 anos para se cadastrar.'
       });
     }
 
@@ -103,6 +124,7 @@ exports.criarCliente = async (req, res) => {
         message: 'CPF inválido'
       });
     }
+    
 
     if (!validarCEP(cep)) {
       await apagarImagemCloudinary(req);

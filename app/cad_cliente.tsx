@@ -81,6 +81,10 @@ export default function CadCliente() {
       Alert.alert('Atenção', 'Preencha todos os campos obrigatórios.');
       return;
     }
+    if (calcularIdade(dataNascimento) < 18) {
+      Alert.alert('Atenção', 'É necessário ter pelo menos 18 anos para se cadastrar.');
+      return;
+    }
 
     try {
       setCarregando(true);
@@ -129,6 +133,19 @@ export default function CadCliente() {
       setCarregando(false);
     }
   }
+  function calcularIdade(dataNascimento: string) {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
+
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+
+  return idade;
+}
 
   return (
     <>

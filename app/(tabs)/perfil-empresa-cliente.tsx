@@ -1,5 +1,7 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -7,214 +9,205 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  Alert,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// ─── MOCK DATA ────────────────────────────────────────────────
-const MOCK_EMPRESA = {
-  nome: 'Luiz Serviços Gerais',
-  telefone1: '(19) 96345 - 5167',
-  telefone2: '(19) 92738 - 5167',
-  endereco: 'Rua Moacir Cavallo, 510 · Centro, Campinas SP',
-  estrelas: 5,
-  descricao: 'Presto serviços gerais a domicílio.',
-  tags: ['Encanador', 'Eletricista', 'Marceneiro'],
-  logo: 'https://www.unisuam.edu.br/wp-content/uploads/2023/05/Design-sem-nome-2.png',
-  fotos: [
-    'https://www.minutoseguros.com.br/blog/wp-content/uploads/2022/07/instalacao-eletrica-em-predio-1.jpg',
-  ],
-  avaliacoes: [
-    {
-      id: '1',
-      usuario: 'João Victor Minelli',
-      foto: 'https://img.freepik.com/free-photo/smiling-young-male-professional-standing-with-arms-crossed-while-making-eye-contact-against-isolated-background_662251-838.jpg?semt=ais_hybrid&w=740&q=80',
-      texto: 'Luiz se mostrou excelente e com preços acessíveis.',
-      estrelas: 5,
-    },
-  ],
-};
+const API_URL = 'http://192.168.0.225:3333/api';
 
-function Stars({ count, size = 16 }: { count: number; size?: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Text key={i} style={{ fontSize: size, color: i <= count ? '#FFB800' : '#ddd' }}>
-          ★
-        </Text>
-      ))}
-    </View>
-  );
-}
-
-export default function PerfilEmpresaScreen() {
-  const empresa = MOCK_EMPRESA;
+export default function PerfilEmpresaCliente() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const idBuscado = id || 5; 
+
+  const [empresa, setEmpresa] = useState<any>(null);
+  const [agenda, setAgenda] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados para o Modal de Agendamento
+  const [modalVisivel, setModalVisivel] = useState(false);
+
+  useEffect(() => {
+    async function carregarDados() {
+      try {
+        // Busca Perfil e Agenda ao mesmo tempo
+        const [resPerfil, resAgenda] = await Promise.all([
+          fetch(`${API_URL}/empresarios/${idBuscado}`),
+          fetch(`${API_URL}/empresarios/${idBuscado}/disponibilidade`)
+        ]);
+
+        if (resPerfil.ok) {
+          const data = await resPerfil.json();
+          setEmpresa(data);
+        }
+
+        if (resAgenda.ok) {
+          const dataAgenda = await resAgenda.json();
+          setAgenda(Array.isArray(dataAgenda) ? dataAgenda : []);
+        }
+      } catch (error) {
+        console.log('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    carregarDados();
+  }, [idBuscado]);
+
+  const handleConfirmarAgendamento = (horario: string, dia: string) => {
+    Alert.alert(
+      "Confirmar Agendamento",
+      `Deseja solicitar um agendamento para ${dia} às ${horario}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Confirmar", onPress: () => {
+          setModalVisivel(false);
+          Alert.alert("Sucesso!", "Sua solicitação foi enviada ao profissional.");
+        }}
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#67C5C0" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!empresa) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Profissional não encontrado.</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={s.safeArea}>
-      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        <View style={{ height: 20 }} />
-
-        <View style={s.mainInfo}>
-          <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
-          <View style={s.mainInfoText}>
-            <Text style={s.empresaNome}>{empresa.nome}</Text>
-            <Text style={s.telefone}>
-              {empresa.telefone1}    {empresa.telefone2}
-            </Text>
-            <Text style={s.endereco}>{empresa.endereco}</Text>
-            <Stars count={empresa.estrelas} />
-          </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <MaterialCommunityIcons name="chevron-left" size={30} color="#333" />
+          </TouchableOpacity>
+          <Image source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} style={styles.logo} />
+          <TouchableOpacity style={styles.favoriteButton}>
+            <MaterialCommunityIcons name="heart-outline" size={24} color="#ff4d4d" />
+          </TouchableOpacity>
         </View>
 
-        <Text style={s.label}>Descrição</Text>
-        <View style={s.box}>
-          <Text style={s.boxText}>{empresa.descricao}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.title}>{empresa.NOME}</Text>
+          <View style={styles.ratingBadge}><Text style={styles.ratingText}>★ 5</Text></View>
         </View>
 
-        <Text style={s.label}>Tags</Text>
-        <View style={s.tagsBox}>
-          <View style={s.tagsRow}>
-            {empresa.tags.map(tag => (
-              <View key={tag} style={s.tag}>
-                <Text style={s.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+        {/* Botões de Acção */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.actionButtonPrimary}>
+            <Text style={styles.actionButtonText}>Mensagem</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButtonSecondary} 
+            onPress={() => setModalVisivel(true)}
+          >
+            <Text style={styles.actionButtonTextSecondary}>Ver Horários</Text>
+          </TouchableOpacity>
         </View>
 
-        <Text style={s.label}>Fotos</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.fotosScroll}>
-          {empresa.fotos.map((uri, idx) => (
-            <Image key={idx} source={{ uri }} style={s.foto} resizeMode="cover" />
+        <Text style={styles.sectionTitle}>Sobre</Text>
+        <View style={styles.box}>
+          <Text style={styles.boxText}>{empresa.BIO || 'Sem descrição.'}</Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>Serviços</Text>
+        <View style={styles.tagsRow}>
+          {empresa.SERVICOS?.map((s: any, i: number) => (
+            <View key={i} style={styles.tag}><Text style={styles.tagText}>{s.NOME}</Text></View>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Portfólio</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {empresa.FOTO_TRABALHO?.map((f: any, i: number) => (
+            <Image key={i} source={{ uri: f.URL }} style={styles.foto} />
           ))}
         </ScrollView>
-
-        <Text style={s.label}>Avaliações</Text>
-        {empresa.avaliacoes.map(av => (
-          <View key={av.id} style={s.avaliacaoCard}>
-            <Image source={{ uri: av.foto }} style={s.avaliacaoAvatar} />
-            <View style={s.avaliacaoInfo}>
-              <Text style={s.avaliacaoNome}>{av.usuario}</Text>
-              <Text style={s.avaliacaoTexto}>{av.texto}</Text>
-              <Stars count={av.estrelas} size={14} />
-            </View>
-          </View>
-        ))}
-
-        <View style={s.btnContainer}>
-  <TouchableOpacity
-    style={s.agendarBtn}
-    onPress={() => 
-      router.push({
-        pathname: '/Cliente_Datas',
-        params: { 
-          id: '1', // Aqui você força o ID 1 que criamos no banco
-          nome: empresa.nome 
-        }
-      })
-    }
-  >
-    <Text style={s.agendarText}>Agendar serviço</Text>
-  </TouchableOpacity>
-</View>
-
-        {/* Espaço final para respiro da rolagem */}
-        <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* 🟢 MODAL DE HORÁRIOS DISPONÍVEIS */}
+      <Modal visible={modalVisivel} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Horários Disponíveis</Text>
+              <TouchableOpacity onPress={() => setModalVisivel(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              {agenda.length > 0 ? (
+                agenda.map((item, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.agendaItem}
+                    onPress={() => handleConfirmarAgendamento(item.PERIODOS, item.DIAS_ATIVOS)}
+                  >
+                    <View style={styles.diaBadge}>
+                      <Text style={styles.diaBadgeText}>{item.DIAS_ATIVOS}</Text>
+                    </View>
+                    <Text style={styles.horarioText}>{item.PERIODOS}</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color="#67C5C0" />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.vazioText}>Este profissional ainda não disponibilizou horários.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  scroll: { flex: 1, paddingHorizontal: 20 },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  scrollContent: { padding: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  backButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eee' },
+  favoriteButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#111', flex: 1 },
+  ratingBadge: { backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  ratingText: { fontWeight: 'bold' },
+  actionButtons: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  actionButtonPrimary: { flex: 1, backgroundColor: '#67C5C0', padding: 15, borderRadius: 12, alignItems: 'center' },
+  actionButtonSecondary: { flex: 1, borderWidth: 1, borderColor: '#67C5C0', padding: 15, borderRadius: 12, alignItems: 'center' },
+  actionButtonText: { color: '#fff', fontWeight: 'bold' },
+  actionButtonTextSecondary: { color: '#67C5C0', fontWeight: 'bold' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
+  box: { padding: 15, borderRadius: 12, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee' },
+  boxText: { color: '#666', lineHeight: 22 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
+  tag: { backgroundColor: '#67C5C0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
+  tagText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  foto: { width: 200, height: 130, borderRadius: 12, marginRight: 10 },
 
-  mainInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 20,
-  },
-  logoImg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0f0f0',
-  },
-  mainInfoText: { flex: 1, gap: 3 },
-  empresaNome: { fontSize: 17, fontWeight: 'bold', color: '#111' },
-  telefone: { fontSize: 11, color: '#555' },
-  endereco: { fontSize: 11, color: '#555', marginBottom: 4 },
-
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 6,
-    marginTop: 4,
-  },
-
-  box: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-  },
-  boxText: { fontSize: 13, color: '#333' },
-
-  tagsBox: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-  },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: {
-    backgroundColor: '#67C5C0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  tagText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  fotosScroll: { marginBottom: 16 },
-  foto: {
-    width: 260,
-    height: 180,
-    borderRadius: 12,
-    marginRight: 12,
-    backgroundColor: '#eee',
-  },
-
-  avaliacaoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 14,
-  },
-  avaliacaoAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#eee',
-  },
-  avaliacaoInfo: { flex: 1, gap: 2 },
-  avaliacaoNome: { fontSize: 14, fontWeight: '700', color: '#111' },
-  avaliacaoTexto: { fontSize: 12, color: '#555' },
-
-  btnContainer: {
-    marginTop: 10,
-    marginBottom: 10,
-    width: '100%',
-  },
-  agendarBtn: {
-    backgroundColor: '#67C5C0',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  agendarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  // Estilos do Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 25 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  agendaItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#eee' },
+  diaBadge: { backgroundColor: '#67C5C0', padding: 6, borderRadius: 8, marginRight: 15 },
+  diaBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  horarioText: { flex: 1, fontWeight: '600', color: '#444' },
+  vazioText: { textAlign: 'center', color: '#999', marginVertical: 20 }
 });

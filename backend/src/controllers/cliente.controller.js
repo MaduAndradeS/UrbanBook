@@ -2,6 +2,11 @@ const clienteService = require('../services/cliente.service');
 const cloudinary = require('cloudinary').v2;
 
 const {
+  buscarEnderecoPorCep,
+  buscarLatitudeLongitude
+} = require('../utils/localizacao.utils');
+
+const {
   limparNumeros,
   validarCPF,
   validarEmail,
@@ -40,7 +45,6 @@ function calcularIdade(dataNascimento) {
   return idade;
 }
 
-// listar clientes com busca opcional
 exports.listarClientes = async (req, res) => {
   try {
     const { busca } = req.query;
@@ -55,7 +59,6 @@ exports.listarClientes = async (req, res) => {
   }
 };
 
-// buscar cliente por ID
 exports.buscarClientePorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -76,7 +79,6 @@ exports.buscarClientePorId = async (req, res) => {
   }
 };
 
-// criar cliente
 exports.criarCliente = async (req, res) => {
   try {
     const {
@@ -85,10 +87,6 @@ exports.criarCliente = async (req, res) => {
       data_nasc,
       email,
       senha,
-      rua,
-      bairro,
-      cidade,
-      estado,
       cep,
       telefone
     } = req.body;
@@ -99,19 +97,15 @@ exports.criarCliente = async (req, res) => {
       !data_nasc ||
       !email ||
       !senha ||
-      !rua ||
-      !bairro ||
-      !cidade ||
-      !estado ||
       !cep ||
       !telefone
-    ) 
-    {
+    ) {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
       });
     }
+
     if (calcularIdade(data_nasc) < 18) {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
@@ -147,13 +141,27 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
+    const cepLimpo = limparNumeros(cep);
+
+    const enderecoCep = await buscarEnderecoPorCep(cepLimpo);
+    const coordenadas = await buscarLatitudeLongitude(enderecoCep);
+
     const fotoUrl = req.file ? req.file.path : null;
 
     const bodyTratado = {
       ...req.body,
       cpf: limparNumeros(cpf),
-      cep: limparNumeros(cep),
+      cep: enderecoCep.cep,
       telefone: limparNumeros(telefone),
+
+      rua: enderecoCep.rua,
+      bairro: enderecoCep.bairro,
+      cidade: enderecoCep.cidade,
+      estado: enderecoCep.estado,
+
+      latitude: coordenadas?.latitude || null,
+      longitude: coordenadas?.longitude || null,
+
       foto_perfil: fotoUrl
     };
 

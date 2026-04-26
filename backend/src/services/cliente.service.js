@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const geocodingService = require('./geocoding.service');
 
 // listar clientes com busca opcional
 exports.listarClientes = async (termoBusca) => {
@@ -47,19 +48,31 @@ exports.criarCliente = async (data) => {
     }
   });
 
+  //buscar latitude e longitude antes de criar endereço
+  const coordenadas = await geocodingService.buscarCoordenadas({
+  rua: data.rua,
+  num: data.num,
+  bairro: data.bairro,
+  cidade: data.cidade,
+  estado: data.estado,
+  cep: data.cep
+});
+
   // 2. Criar o Endereço
-  await prisma.eNDERECO.create({
-    data: {
-      ID_CLIENTE: novoCliente.ID_CLIENTE,
-      RUA: data.rua,
-      NUM: data.num ? Number(data.num) : null,
-      BAIRRO: data.bairro,
-      CIDADE: data.cidade,
-      ESTADO: data.estado,
-      CEP: data.cep,
-      COMP: data.comp || null
-    }
-  });
+ await prisma.eNDERECO.create({
+  data: {
+    ID_CLIENTE: novoCliente.ID_CLIENTE,
+    RUA: data.rua,
+    NUM: data.num ? Number(data.num) : null,
+    BAIRRO: data.bairro,
+    CIDADE: data.cidade,
+    ESTADO: data.estado,
+    CEP: data.cep,
+    COMP: data.comp || null,
+    LATITUDE: data.latitude || null,
+    LONGITUDE: data.longitude || null
+  }
+});
 
   // 3. Criar o Telefone
   await prisma.tELEFONE.create({

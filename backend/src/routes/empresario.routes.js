@@ -16,7 +16,7 @@ router.get('/pendentes', empresarioController.listarEmpresariosPendentes);
 router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade);
 router.post('/disponibilidade', empresarioController.configurarDisponibilidade);
 router.patch('/:id/aprovar', empresarioController.aprovarEmpresario);
-
+router.get('/proximos', empresarioController.listarEmpresariosProximos);
 //  BUSCA GENÉRICA ---
 router.get('/:id', empresarioController.buscarEmpresarioPorId);
 

@@ -75,6 +75,8 @@ model ENDERECO {
   CEP           String      @db.Char(8)
   COMP          String?     @db.VarChar(20)
   ID_ENDERECO   Int         @id @default(autoincrement())
+  LATITUDE      Decimal?    @db.Decimal(10, 8)
+  LONGITUDE     Decimal?    @db.Decimal(11, 8)
   EMPRESARIO    EMPRESARIO? @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: NoAction, onUpdate: NoAction, map: "ENDERECO_ibfk_1")
   CLIENTE       CLIENTE?    @relation(fields: [ID_CLIENTE], references: [ID_CLIENTE], onDelete: NoAction, onUpdate: NoAction, map: "ENDERECO_ibfk_2")
 

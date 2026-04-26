@@ -2,6 +2,11 @@ const empresarioService = require('../services/empresario.service');
 const cloudinary = require('cloudinary').v2;
 
 const {
+  buscarEnderecoPorCep,
+  buscarLatitudeLongitude
+} = require('../utils/localizacao.utils');
+
+const {
   limparNumeros,
   validarCNPJ,
   validarEmail,
@@ -89,10 +94,6 @@ exports.criarEmpresario = async (req, res) => {
       cnpj,
       email,
       senha,
-      rua,
-      bairro,
-      cidade,
-      estado,
       cep,
       telefone,
       servicos
@@ -103,10 +104,6 @@ exports.criarEmpresario = async (req, res) => {
       !cnpj ||
       !email ||
       !senha ||
-      !rua ||
-      !bairro ||
-      !cidade ||
-      !estado ||
       !cep ||
       !telefone
     ) {
@@ -151,13 +148,34 @@ exports.criarEmpresario = async (req, res) => {
       });
     }
 
+    const cepLimpo = limparNumeros(cep);
+
+    const enderecoCep = await buscarEnderecoPorCep(cepLimpo);
+    const coordenadas = await buscarLatitudeLongitude(enderecoCep);
+
+    if (!coordenadas) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Não foi possível localizar este endereço no mapa'
+      });
+    }
+
     const fotoPerfilUrl = req.file ? req.file.path : null;
 
     const bodyTratado = {
       ...req.body,
       cnpj: limparNumeros(cnpj),
-      cep: limparNumeros(cep),
+      cep: enderecoCep.cep,
       telefone: limparNumeros(telefone),
+
+      rua: enderecoCep.rua,
+      bairro: enderecoCep.bairro,
+      cidade: enderecoCep.cidade,
+      estado: enderecoCep.estado,
+
+      latitude: coordenadas.latitude,
+      longitude: coordenadas.longitude,
+
       foto_perfil: fotoPerfilUrl
     };
 
@@ -286,6 +304,31 @@ exports.buscarDisponibilidade = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao buscar disponibilidade',
+      error: error.message
+    });
+  }
+};
+
+exports.listarEmpresariosProximos = async (req, res) => {
+  try {
+    const { lat, lng, raio } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        message: 'Latitude e longitude são obrigatórias'
+      });
+    }
+
+    const empresarios = await empresarioService.listarEmpresariosProximos(
+      Number(lat),
+      Number(lng),
+      raio ? Number(raio) : 10
+    );
+
+    return res.status(200).json(empresarios.map(removerSenha));
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Erro ao buscar empresários próximos',
       error: error.message
     });
   }

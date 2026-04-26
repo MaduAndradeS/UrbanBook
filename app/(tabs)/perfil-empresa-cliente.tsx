@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,12 +18,17 @@ const API_URL = 'http://192.168.0.225:3333/api';
 export default function PerfilEmpresaCliente() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const idBuscado = id || 5; 
+  
+  const idBuscado = id ? Number(id) : 5; 
 
   const [empresa, setEmpresa] = useState<any>(null);
   const [agenda, setAgenda] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modais
   const [modalVisivel, setModalVisivel] = useState(false);
+  const [modalFotoVisivel, setModalFotoVisivel] = useState(false);
+  const [fotoSelecionada, setFotoSelecionada] = useState('');
 
   useEffect(() => {
     async function carregarDados() {
@@ -41,7 +45,17 @@ export default function PerfilEmpresaCliente() {
 
         if (resAgenda.ok) {
           const dataAgenda = await resAgenda.json();
-          setAgenda(Array.isArray(dataAgenda) ? dataAgenda : []);
+          
+          let listaHorarios: any[] = [];
+          if (Array.isArray(dataAgenda)) {
+            listaHorarios = dataAgenda;
+          } else if (dataAgenda && dataAgenda.disponibilidade) {
+            listaHorarios = dataAgenda.disponibilidade;
+          } else if (dataAgenda && dataAgenda.ID_DISP) {
+            listaHorarios = [dataAgenda]; 
+          }
+          
+          setAgenda(listaHorarios);
         }
       } catch (error) {
         console.log('Erro ao carregar dados:', error);
@@ -60,53 +74,48 @@ export default function PerfilEmpresaCliente() {
         { text: "Cancelar", style: "cancel" },
         { text: "Confirmar", onPress: () => {
           setModalVisivel(false);
-          Alert.alert("Sucesso!", "Sua solicitação foi enviada ao profissional.");
+          Alert.alert("Sucesso!", "A sua solicitação foi enviada ao profissional.");
         }}
       ]
     );
   };
 
+  const abrirFoto = (url: string) => {
+    setFotoSelecionada(url);
+    setModalFotoVisivel(true);
+  };
+
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, { justifyContent: 'center' }]}>
         <ActivityIndicator size="large" color="#67C5C0" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!empresa) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text>Profissional não encontrado.</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Header - Limpo sem curtidas */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="chevron-left" size={30} color="#333" />
-          </TouchableOpacity>
-          
           <Image 
             source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} 
             style={styles.logo} 
           />
-          
-          {/* Espaço vazio para manter o alinhamento central da logo */}
-          <View style={{ width: 45 }} />
         </View>
 
         <View style={styles.infoRow}>
           <Text style={styles.title}>{empresa.NOME}</Text>
-          <View style={styles.ratingBadge}><Text style={styles.ratingText}>★ 5</Text></View>
         </View>
 
-        {/* Botão de Agendamento Principal */}
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={styles.actionButtonFull} 
@@ -132,7 +141,9 @@ export default function PerfilEmpresaCliente() {
         <Text style={styles.sectionTitle}>Portfólio</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {empresa.FOTO_TRABALHO?.map((f: any, i: number) => (
-            <Image key={i} source={{ uri: f.URL }} style={styles.foto} />
+            <TouchableOpacity key={i} onPress={() => abrirFoto(f.URL)}>
+              <Image source={{ uri: f.URL }} style={styles.foto} />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </ScrollView>
@@ -170,20 +181,40 @@ export default function PerfilEmpresaCliente() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+      {/* Modal de Foto Ampliada */}
+      <Modal visible={modalFotoVisivel} transparent={true} animationType="fade">
+        <View style={styles.modalFotoOverlay}>
+          <TouchableOpacity 
+            style={styles.fecharFotoBtn} 
+            onPress={() => setModalFotoVisivel(false)}
+          >
+            <MaterialCommunityIcons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          
+          {fotoSelecionada ? (
+            <Image 
+              source={{ uri: fotoSelecionada }} 
+              style={styles.fotoAmpliada} 
+              resizeMode="contain" 
+            />
+          ) : null}
+        </View>
+      </Modal>
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scrollContent: { padding: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  backButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 15 }, 
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  
+  header: { alignItems: 'center', marginTop: 10, marginBottom: 15 },
   logo: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eee' },
-  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#111', flex: 1 },
-  ratingBadge: { backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  ratingText: { fontWeight: 'bold' },
+  
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#111', textAlign: 'center' },
   
   actionButtons: { marginBottom: 20 },
   actionButtonFull: { 
@@ -217,5 +248,24 @@ const styles = StyleSheet.create({
   diaBadge: { backgroundColor: '#67C5C0', padding: 6, borderRadius: 8, marginRight: 15 },
   diaBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
   horarioText: { flex: 1, fontWeight: '600', color: '#444' },
-  vazioText: { textAlign: 'center', color: '#999', marginVertical: 20 }
+  vazioText: { textAlign: 'center', color: '#999', marginVertical: 20 },
+
+  // Estilos da Foto Ampliada
+  modalFotoOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.9)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  fecharFotoBtn: { 
+    position: 'absolute', 
+    top: 50, 
+    right: 20, 
+    zIndex: 10, 
+    padding: 10 
+  },
+  fotoAmpliada: { 
+    width: '100%', 
+    height: '80%' 
+  }
 });

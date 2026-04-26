@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
   Modal,
-  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -22,63 +21,30 @@ export default function PerfilEmpresaCliente() {
   const idBuscado = id ? Number(id) : 5; 
 
   const [empresa, setEmpresa] = useState<any>(null);
-  const [agenda, setAgenda] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Modais
-  const [modalVisivel, setModalVisivel] = useState(false);
+  // Modal de Foto (Mantido)
   const [modalFotoVisivel, setModalFotoVisivel] = useState(false);
   const [fotoSelecionada, setFotoSelecionada] = useState('');
 
   useEffect(() => {
     async function carregarDados() {
       try {
-        const [resPerfil, resAgenda] = await Promise.all([
-          fetch(`${API_URL}/empresarios/${idBuscado}`),
-          fetch(`${API_URL}/empresarios/${idBuscado}/disponibilidade`)
-        ]);
+        // Agora só precisamos buscar o perfil, a agenda fica com a tela da Dudinha!
+        const resPerfil = await fetch(`${API_URL}/empresarios/${idBuscado}`);
 
         if (resPerfil.ok) {
           const data = await resPerfil.json();
           setEmpresa(data);
         }
-
-        if (resAgenda.ok) {
-          const dataAgenda = await resAgenda.json();
-          
-          let listaHorarios: any[] = [];
-          if (Array.isArray(dataAgenda)) {
-            listaHorarios = dataAgenda;
-          } else if (dataAgenda && dataAgenda.disponibilidade) {
-            listaHorarios = dataAgenda.disponibilidade;
-          } else if (dataAgenda && dataAgenda.ID_DISP) {
-            listaHorarios = [dataAgenda]; 
-          }
-          
-          setAgenda(listaHorarios);
-        }
       } catch (error) {
-        console.log('Erro ao carregar dados:', error);
+        console.log('Erro ao carregar dados do perfil:', error);
       } finally {
         setLoading(false);
       }
     }
     carregarDados();
   }, [idBuscado]);
-
-  const handleConfirmarAgendamento = (horario: string, dia: string) => {
-    Alert.alert(
-      "Confirmar Agendamento",
-      `Deseja solicitar um agendamento para ${dia} às ${horario}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Confirmar", onPress: () => {
-          setModalVisivel(false);
-          Alert.alert("Sucesso!", "A sua solicitação foi enviada ao profissional.");
-        }}
-      ]
-    );
-  };
 
   const abrirFoto = (url: string) => {
     setFotoSelecionada(url);
@@ -103,13 +69,21 @@ export default function PerfilEmpresaCliente() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <MaterialCommunityIcons name="chevron-left" size={30} color="#333" />
+          </TouchableOpacity>
+          
           <Image 
             source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} 
             style={styles.logo} 
           />
+          
+          <View style={{ width: 45 }} />
         </View>
 
         <View style={styles.infoRow}>
@@ -117,9 +91,10 @@ export default function PerfilEmpresaCliente() {
         </View>
 
         <View style={styles.actionButtons}>
+          {/* 🟢 ROTA PARA A PÁGINA DA DUDINHA PASSANDO O ID */}
           <TouchableOpacity 
             style={styles.actionButtonFull} 
-            onPress={() => setModalVisivel(true)}
+            onPress={() => router.push(`/Cliente_Datas?id=${idBuscado}`)}
           >
             <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.actionButtonText}>Agendar Horário</Text>
@@ -147,40 +122,6 @@ export default function PerfilEmpresaCliente() {
           ))}
         </ScrollView>
       </ScrollView>
-
-      {/* Modal de Horários */}
-      <Modal visible={modalVisivel} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Horários Disponíveis</Text>
-              <TouchableOpacity onPress={() => setModalVisivel(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 400 }}>
-              {agenda.length > 0 ? (
-                agenda.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.agendaItem}
-                    onPress={() => handleConfirmarAgendamento(item.PERIODOS, item.DIAS_ATIVOS)}
-                  >
-                    <View style={styles.diaBadge}>
-                      <Text style={styles.diaBadgeText}>{item.DIAS_ATIVOS}</Text>
-                    </View>
-                    <Text style={styles.horarioText}>{item.PERIODOS}</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color="#67C5C0" />
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <Text style={styles.vazioText}>Este profissional ainda não disponibilizou horários.</Text>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal de Foto Ampliada */}
       <Modal visible={modalFotoVisivel} transparent={true} animationType="fade">
@@ -210,7 +151,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: 15 }, 
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
   
-  header: { alignItems: 'center', marginTop: 10, marginBottom: 15 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
+  backButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
   logo: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eee' },
   
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
@@ -239,16 +181,6 @@ const styles = StyleSheet.create({
   tag: { backgroundColor: '#67C5C0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
   tagText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   foto: { width: 200, height: 130, borderRadius: 12, marginRight: 10 },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 25 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold' },
-  agendaItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#eee' },
-  diaBadge: { backgroundColor: '#67C5C0', padding: 6, borderRadius: 8, marginRight: 15 },
-  diaBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  horarioText: { flex: 1, fontWeight: '600', color: '#444' },
-  vazioText: { textAlign: 'center', color: '#999', marginVertical: 20 },
 
   // Estilos da Foto Ampliada
   modalFotoOverlay: { 

@@ -161,7 +161,6 @@ exports.criarCliente = async (req, res) => {
 
     return res.status(201).json(removerSenha(novoCliente));
   } catch (error) {
-    console.log('ERRO REAL AO CRIAR CLIENTE:', error);
     await apagarImagemCloudinary(req);
 
     if (error.code === 'P2002') {

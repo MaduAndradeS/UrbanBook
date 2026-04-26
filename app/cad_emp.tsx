@@ -126,6 +126,30 @@ export default function App() {
   function removeService(service: string) {
     setSelectedServices(selectedServices.filter(item => item !== service));
   }
+  async function buscarCep(cepDigitado: string) {
+  const cepLimpo = cepDigitado.replace(/\D/g, '');
+
+  if (cepLimpo.length !== 8) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    const data = await response.json();
+
+    if (data.erro) {
+      Alert.alert('Atenção', 'CEP não encontrado.');
+      return;
+    }
+
+    setRua(data.logradouro || '');
+    setBairro(data.bairro || '');
+    setCidade(data.localidade || '');
+    setUf(data.uf || '');
+  } catch (error) {
+    Alert.alert('Erro', 'Não foi possível buscar o CEP.');
+  }
+}
 
   async function validarCadastro() {
     if (
@@ -317,11 +341,15 @@ export default function App() {
             <View style={styles.inputSmallContainer}>
               <Text style={styles.smallLabel}>CEP</Text>
               <TextInput
-                style={styles.inputSmall}
-                value={cep}
-                onChangeText={setCep}
-                keyboardType="numeric"
-              />
+              style={styles.inputSmall}
+              value={cep}
+              onChangeText={(texto) => {
+                setCep(texto);
+                buscarCep(texto);
+              }}
+              keyboardType="numeric"
+              maxLength={9}
+            />
             </View>
 
             <View style={styles.inputSmallContainer}>

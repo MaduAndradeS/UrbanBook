@@ -2,8 +2,14 @@ const clienteService = require('../services/cliente.service');
 const cloudinary = require('cloudinary').v2;
 
 const {
+  buscarEnderecoPorCep,
+  buscarLatitudeLongitude
+} = require('../utils/localizacao.utils');
+
+const {
   limparNumeros,
   validarCPF,
+  validarEmail,
   validarCEP,
   validarTelefone
 } = require('../utils/validacoes');
@@ -25,7 +31,20 @@ const apagarImagemCloudinary = async (req) => {
   }
 };
 
-// listar clientes com busca opcional
+function calcularIdade(dataNascimento) {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
+
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+
+  return idade;
+}
+
 exports.listarClientes = async (req, res) => {
   try {
     const { busca } = req.query;
@@ -40,7 +59,6 @@ exports.listarClientes = async (req, res) => {
   }
 };
 
-// buscar cliente por ID
 exports.buscarClientePorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -61,7 +79,6 @@ exports.buscarClientePorId = async (req, res) => {
   }
 };
 
-// criar cliente
 exports.criarCliente = async (req, res) => {
   try {
     const {
@@ -70,10 +87,6 @@ exports.criarCliente = async (req, res) => {
       data_nasc,
       email,
       senha,
-      rua,
-      bairro,
-      cidade,
-      estado,
       cep,
       telefone
     } = req.body;
@@ -84,10 +97,6 @@ exports.criarCliente = async (req, res) => {
       !data_nasc ||
       !email ||
       !senha ||
-      !rua ||
-      !bairro ||
-      !cidade ||
-      !estado ||
       !cep ||
       !telefone
     ) {
@@ -97,10 +106,24 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
+    if (calcularIdade(data_nasc) < 18) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'É necessário ter pelo menos 18 anos para se cadastrar.'
+      });
+    }
+
     if (!validarCPF(cpf)) {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'CPF inválido'
+      });
+    }
+
+    if (!validarEmail(email)) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Email inválido'
       });
     }
 
@@ -118,13 +141,27 @@ exports.criarCliente = async (req, res) => {
       });
     }
 
+    const cepLimpo = limparNumeros(cep);
+
+    const enderecoCep = await buscarEnderecoPorCep(cepLimpo);
+    const coordenadas = await buscarLatitudeLongitude(enderecoCep);
+
     const fotoUrl = req.file ? req.file.path : null;
 
     const bodyTratado = {
       ...req.body,
       cpf: limparNumeros(cpf),
-      cep: limparNumeros(cep),
+      cep: enderecoCep.cep,
       telefone: limparNumeros(telefone),
+
+      rua: enderecoCep.rua,
+      bairro: enderecoCep.bairro,
+      cidade: enderecoCep.cidade,
+      estado: enderecoCep.estado,
+
+      latitude: coordenadas?.latitude || null,
+      longitude: coordenadas?.longitude || null,
+
       foto_perfil: fotoUrl
     };
 

@@ -5,14 +5,14 @@ import {
   Dimensions,
   Image,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -126,6 +126,30 @@ export default function App() {
   function removeService(service: string) {
     setSelectedServices(selectedServices.filter(item => item !== service));
   }
+  async function buscarCep(cepDigitado: string) {
+  const cepLimpo = cepDigitado.replace(/\D/g, '');
+
+  if (cepLimpo.length !== 8) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    const data = await response.json();
+
+    if (data.erro) {
+      Alert.alert('Atenção', 'CEP não encontrado.');
+      return;
+    }
+
+    setRua(data.logradouro || '');
+    setBairro(data.bairro || '');
+    setCidade(data.localidade || '');
+    setUf(data.uf || '');
+  } catch (error) {
+    Alert.alert('Erro', 'Não foi possível buscar o CEP.');
+  }
+}
 
   async function validarCadastro() {
     if (
@@ -205,13 +229,17 @@ export default function App() {
     }
   }
 
-  return (
-    <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
+ 
+return (
+  <>
+   <KeyboardAwareScrollView
+  style={styles.container}
+  contentContainerStyle={styles.scrollContainer}
+  showsVerticalScrollIndicator={false}
+  keyboardShouldPersistTaps="handled"
+  enableOnAndroid
+  extraScrollHeight={80}
+>
         <View style={styles.top}>
           <Image
             source={logo}
@@ -232,11 +260,7 @@ export default function App() {
           </TouchableOpacity>
 
           <Text style={styles.label}>Nome</Text>
-          <TextInput
-            style={styles.input}
-            value={nome}
-            onChangeText={setNome}
-          />
+          <TextInput style={styles.input} value={nome} onChangeText={setNome} />
 
           <Text style={styles.label}>CNPJ</Text>
           <TextInput
@@ -247,11 +271,7 @@ export default function App() {
           />
 
           <Text style={styles.label}>Bio</Text>
-          <TextInput
-            style={styles.input}
-            value={bio}
-            onChangeText={setBio}
-          />
+          <TextInput style={styles.input} value={bio} onChangeText={setBio} />
 
           <Text style={styles.label}>E-mail</Text>
           <TextInput
@@ -285,7 +305,6 @@ export default function App() {
               setCategoriaSelecionada(null);
               setServiceModalVisible(true);
             }}
-            activeOpacity={0.8}
           >
             <View style={styles.inputSelectContent}>
               {selectedServices.length > 0 ? (
@@ -304,7 +323,9 @@ export default function App() {
                   ))}
                 </View>
               ) : (
-                <Text style={styles.placeholderText}>Selecione até 5 serviços</Text>
+                <Text style={styles.placeholderText}>
+                  Selecione até 5 serviços
+                </Text>
               )}
             </View>
 
@@ -319,8 +340,12 @@ export default function App() {
               <TextInput
                 style={styles.inputSmall}
                 value={cep}
-                onChangeText={setCep}
+                onChangeText={(texto) => {
+                  setCep(texto);
+                  buscarCep(texto);
+                }}
                 keyboardType="numeric"
+                maxLength={9}
               />
             </View>
 
@@ -336,18 +361,10 @@ export default function App() {
           </View>
 
           <Text style={styles.label}>Rua</Text>
-          <TextInput
-            style={styles.input}
-            value={rua}
-            onChangeText={setRua}
-          />
+          <TextInput style={styles.input} value={rua} onChangeText={setRua} />
 
           <Text style={styles.label}>Bairro</Text>
-          <TextInput
-            style={styles.input}
-            value={bairro}
-            onChangeText={setBairro}
-          />
+          <TextInput style={styles.input} value={bairro} onChangeText={setBairro} />
 
           <View style={styles.row}>
             <View style={styles.inputCityContainer}>
@@ -365,8 +382,8 @@ export default function App() {
                 style={styles.inputUf}
                 value={uf}
                 onChangeText={setUf}
-                autoCapitalize="characters"
                 maxLength={2}
+                autoCapitalize="characters"
               />
             </View>
           </View>
@@ -376,6 +393,7 @@ export default function App() {
             style={styles.input}
             value={complemento}
             onChangeText={setComplemento}
+            returnKeyType="done"
           />
 
           <TouchableOpacity
@@ -388,8 +406,9 @@ export default function App() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
+    {/* mantém seus modais exatamente como estão */}
       <Modal
         transparent
         visible={typeModalVisible}
@@ -563,11 +582,11 @@ const styles = StyleSheet.create({
   },
 
   bottom: {
-    minHeight: (screenHeight / 3) * 2,
-    backgroundColor: '#67C5C0',
-    padding: 25,
-    borderTopLeftRadius: 50,
-  },
+  minHeight: (screenHeight / 3) * 2,
+  backgroundColor: '#67C5C0',
+  padding: 25,
+  borderTopLeftRadius: 50,
+},
 
   selectButton: {
     alignSelf: 'center',

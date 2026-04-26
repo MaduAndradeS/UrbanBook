@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const geocodingService = require('./geocoding.service');
 
 // 🔎 LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
 exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categoria = null) => {
@@ -60,7 +61,8 @@ exports.buscarEmpresarioPorId = async (id) => {
   });
 };
 
-// ➕ CRIAR EMPRESÁRIO
+
+// criar empresário
 exports.criarEmpresario = async (data) => {
   const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
@@ -73,19 +75,30 @@ exports.criarEmpresario = async (data) => {
       ID_ADM: null
     }
   });
+  const coordenadas = await geocodingService.buscarCoordenadas({
+    rua: data.rua,
+    num: data.num,
+    bairro: data.bairro,
+    cidade: data.cidade,
+    estado: data.estado,
+    cep: data.cep
+  });
+
 
   await prisma.eNDERECO.create({
-    data: {
-      ID_EMPRESARIO: novoEmpresario.ID_EMPRESARIO,
-      RUA: data.rua,
-      NUM: data.num ? Number(data.num) : null,
-      BAIRRO: data.bairro,
-      CIDADE: data.cidade,
-      ESTADO: data.estado,
-      CEP: data.cep,
-      COMP: data.comp || null
-    }
-  });
+  data: {
+    ID_EMPRESARIO: novoEmpresario.ID_EMPRESARIO,
+    RUA: data.rua,
+    NUM: data.num ? Number(data.num) : null,
+    BAIRRO: data.bairro,
+    CIDADE: data.cidade,
+    ESTADO: data.estado,
+    CEP: data.cep,
+    COMP: data.comp || null,
+    LATITUDE: data.latitude,
+    LONGITUDE: data.longitude
+  }
+});
 
   await prisma.tELEFONE.create({
     data: {
@@ -111,12 +124,17 @@ exports.criarEmpresario = async (data) => {
 // ✅ APROVAR EMPRESÁRIO (ADM) - Correção essencial do Pedro aplicada aqui
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({
-    where: { ID_EMPRESARIO: idEmpresario },
-    data: { ID_ADM: idAdm }, // Agora o campo é realmente atualizado!
+    where: {
+      ID_EMPRESARIO: Number(idEmpresario)
+    },
+    data: {
+      ID_ADM: Number(idAdm)
+    },
     include: {
       ENDERECO: true,
       TELEFONE: true,
-      SERVICOS: true
+      SERVICOS: true,
+      FOTO_TRABALHO: true
     }
   });
 };
@@ -178,4 +196,66 @@ exports.buscarDisponibilidadePorId = async (id) => {
     console.error("Erro no Prisma ao buscar disponibilidade:", error);
     throw error;
   }
+};
+
+exports.listarEmpresariosProximos = async (lat, lng, raioKm = 10) => {
+  const empresarios = await prisma.eMPRESARIO.findMany({
+    where: {
+      ID_ADM: {
+        not: null
+      },
+      ENDERECO: {
+        some: {
+          LATITUDE: {
+            not: null
+          },
+          LONGITUDE: {
+            not: null
+          }
+        }
+      }
+    },
+    include: {
+      ENDERECO: true,
+      TELEFONE: true,
+      SERVICOS: true,
+      FOTO_TRABALHO: true
+    }
+  });
+
+  const calcularDistanciaKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+
+  return empresarios
+    .map((empresario) => {
+      const endereco = empresario.ENDERECO[0];
+
+      const distancia = calcularDistanciaKm(
+        Number(lat),
+        Number(lng),
+        Number(endereco.LATITUDE),
+        Number(endereco.LONGITUDE)
+      );
+
+      return {
+        ...empresario,
+        DISTANCIA_KM: Number(distancia.toFixed(2))
+      };
+    })
+    .filter((empresario) => empresario.DISTANCIA_KM <= Number(raioKm))
+    .sort((a, b) => a.DISTANCIA_KM - b.DISTANCIA_KM);
 };

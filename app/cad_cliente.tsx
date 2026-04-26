@@ -7,14 +7,14 @@ import {
   Image,
   Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -169,10 +169,14 @@ export default function CadCliente() {
 
   return (
     <>
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        enableAutomaticScroll
+        extraScrollHeight={80}
       >
         <View style={styles.top}>
           <Image
@@ -335,6 +339,7 @@ export default function CadCliente() {
             style={styles.input}
             value={complemento}
             onChangeText={setComplemento}
+            returnKeyType="done"
           />
 
           <TouchableOpacity
@@ -347,7 +352,7 @@ export default function CadCliente() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Modal
         transparent
@@ -408,8 +413,8 @@ const styles = StyleSheet.create({
   },
 
   scrollContainer: {
-    minHeight: screenHeight,
-  },
+  minHeight: screenHeight,
+},
 
   top: {
     flex: 1,

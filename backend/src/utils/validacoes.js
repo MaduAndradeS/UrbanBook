@@ -62,8 +62,24 @@ function validarCEP(cep) {
 }
 
 function validarTelefone(telefone) {
-  const valor = limparNumeros(telefone);
-  return valor.length >= 10 && valor.length <= 11;
+  const tel = telefone.replace(/\D/g, '');
+
+  // precisa ter 11 dígitos
+  if (tel.length !== 11) return false;
+
+  const ddd = tel.substring(0, 2);
+  const numero = tel.substring(2);
+
+  // DDD não pode começar com 0
+  if (ddd.startsWith('0')) return false;
+
+  // celular no Brasil começa com 9
+  if (!numero.startsWith('9')) return false;
+
+  // bloquear números repetidos (111111..., 999999...)
+  if (/^(\d)\1+$/.test(tel)) return false;
+
+  return true;
 }
 
 module.exports = {

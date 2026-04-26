@@ -4,6 +4,7 @@ const cloudinary = require('cloudinary').v2;
 const {
   limparNumeros,
   validarCPF,
+  validarEmail,
   validarCEP,
   validarTelefone
 } = require('../utils/validacoes');
@@ -124,7 +125,13 @@ exports.criarCliente = async (req, res) => {
         message: 'CPF inválido'
       });
     }
-    
+
+    if (!validarEmail(email)) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Email inválido'
+      });
+    }
 
     if (!validarCEP(cep)) {
       await apagarImagemCloudinary(req);
@@ -154,6 +161,7 @@ exports.criarCliente = async (req, res) => {
 
     return res.status(201).json(removerSenha(novoCliente));
   } catch (error) {
+    console.log('ERRO REAL AO CRIAR CLIENTE:', error);
     await apagarImagemCloudinary(req);
 
     if (error.code === 'P2002') {

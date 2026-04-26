@@ -4,6 +4,7 @@ const cloudinary = require('cloudinary').v2;
 const {
   limparNumeros,
   validarCNPJ,
+  validarEmail,
   validarCEP,
   validarTelefone
 } = require('../utils/validacoes');
@@ -126,6 +127,13 @@ exports.criarEmpresario = async (req, res) => {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
         message: 'CNPJ inválido'
+      });
+    }
+
+    if (!validarEmail(email)) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Email inválido'
       });
     }
 

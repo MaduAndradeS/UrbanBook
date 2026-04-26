@@ -24,14 +24,11 @@ export default function PerfilEmpresaCliente() {
   const [empresa, setEmpresa] = useState<any>(null);
   const [agenda, setAgenda] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Estados para o Modal de Agendamento
   const [modalVisivel, setModalVisivel] = useState(false);
 
   useEffect(() => {
     async function carregarDados() {
       try {
-        // Busca Perfil e Agenda ao mesmo tempo
         const [resPerfil, resAgenda] = await Promise.all([
           fetch(`${API_URL}/empresarios/${idBuscado}`),
           fetch(`${API_URL}/empresarios/${idBuscado}/disponibilidade`)
@@ -89,15 +86,19 @@ export default function PerfilEmpresaCliente() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Header */}
+        {/* Header - Limpo sem curtidas */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <MaterialCommunityIcons name="chevron-left" size={30} color="#333" />
           </TouchableOpacity>
-          <Image source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} style={styles.logo} />
-          <TouchableOpacity style={styles.favoriteButton}>
-            <MaterialCommunityIcons name="heart-outline" size={24} color="#ff4d4d" />
-          </TouchableOpacity>
+          
+          <Image 
+            source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} 
+            style={styles.logo} 
+          />
+          
+          {/* Espaço vazio para manter o alinhamento central da logo */}
+          <View style={{ width: 45 }} />
         </View>
 
         <View style={styles.infoRow}>
@@ -105,17 +106,14 @@ export default function PerfilEmpresaCliente() {
           <View style={styles.ratingBadge}><Text style={styles.ratingText}>★ 5</Text></View>
         </View>
 
-        {/* Botões de Acção */}
+        {/* Botão de Agendamento Principal */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButtonPrimary}>
-            <Text style={styles.actionButtonText}>Mensagem</Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity 
-            style={styles.actionButtonSecondary} 
+            style={styles.actionButtonFull} 
             onPress={() => setModalVisivel(true)}
           >
-            <Text style={styles.actionButtonTextSecondary}>Ver Horários</Text>
+            <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.actionButtonText}>Agendar Horário</Text>
           </TouchableOpacity>
         </View>
 
@@ -139,7 +137,7 @@ export default function PerfilEmpresaCliente() {
         </ScrollView>
       </ScrollView>
 
-      {/* 🟢 MODAL DE HORÁRIOS DISPONÍVEIS */}
+      {/* Modal de Horários */}
       <Modal visible={modalVisivel} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -182,16 +180,27 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   backButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
   logo: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eee' },
-  favoriteButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#111', flex: 1 },
   ratingBadge: { backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   ratingText: { fontWeight: 'bold' },
-  actionButtons: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  actionButtonPrimary: { flex: 1, backgroundColor: '#67C5C0', padding: 15, borderRadius: 12, alignItems: 'center' },
-  actionButtonSecondary: { flex: 1, borderWidth: 1, borderColor: '#67C5C0', padding: 15, borderRadius: 12, alignItems: 'center' },
-  actionButtonText: { color: '#fff', fontWeight: 'bold' },
-  actionButtonTextSecondary: { color: '#67C5C0', fontWeight: 'bold' },
+  
+  actionButtons: { marginBottom: 20 },
+  actionButtonFull: { 
+    flexDirection: 'row',
+    backgroundColor: '#67C5C0', 
+    padding: 16, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
   box: { padding: 15, borderRadius: 12, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee' },
   boxText: { color: '#666', lineHeight: 22 },
@@ -200,7 +209,6 @@ const styles = StyleSheet.create({
   tagText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   foto: { width: 200, height: 130, borderRadius: 12, marginRight: 10 },
 
-  // Estilos do Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 25 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

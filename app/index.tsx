@@ -1,10 +1,10 @@
-import { Stack, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import logo from '../assets/images/logo.png';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+const API_URL = 'http://172.20.10.2:3333/api';
 
 export default function App() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function App() {
         Alert.alert('Erro no Login', data.error || 'Credenciais inválidas.');
       }
     } catch (error) {
-      Alert.alert('Erro de Conexão', 'Verifique se o backend está rodando no IP .225');
+      Alert.alert('Erro de Conexão', 'Verifique se o backend está rodando no IP .2');
     } finally {
       setLoading(false);
     }

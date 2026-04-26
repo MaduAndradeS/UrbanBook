@@ -1,6 +1,8 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -9,6 +11,7 @@ import {
   View
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
+import { API_URL } from '../config/api';
 
 type Periodo = {
   inicio: Date;
@@ -16,7 +19,7 @@ type Periodo = {
 };
 
 export default function Disponibilidade() {
-  const [duracao, setDuracao] = useState<number>(30);
+  const [duracao, setDuracao] = useState<number>(30); 
 
   const [periodos, setPeriodos] = useState<Periodo[]>([
     { inicio: new Date(), fim: new Date() }
@@ -31,6 +34,11 @@ export default function Disponibilidade() {
   const [diasAtivos, setDiasAtivos] = useState<Record<string, boolean>>({});
   const [horariosPorDia, setHorariosPorDia] = useState<Record<string, string[]>>({});
   const [bloqueados, setBloqueados] = useState<Record<string, string[]>>({});
+  
+  const [carregando, setCarregando] = useState<boolean>(false);
+
+  // Data de hoje para travar o calendário
+  const hoje = new Date().toISOString().split('T')[0];
 
   function formatarHora(date: Date): string {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -47,7 +55,7 @@ export default function Disponibilidade() {
       const inicio = toMin(p.inicio);
       const fim = toMin(p.fim);
 
-      if (inicio >= fim) return; // validação
+      if (inicio >= fim) return; 
 
       let t = inicio;
 
@@ -68,31 +76,72 @@ export default function Disponibilidade() {
     }));
   }
 
+  async function salvarAgenda() {
+    setCarregando(true);
+    try {
+      const periodosString = periodos.map(p => `${formatarHora(p.inicio)}-${formatarHora(p.fim)}`).join(',');
+      const diasAtivosString = Object.keys(diasAtivos).filter(d => diasAtivos[d]).join(',');
+      const bloqueiosString = Object.entries(bloqueados).flatMap(([dia, horas]) => horas.map(h => `${dia}T${h}`)).join(',');
+
+      const response = await fetch(`${API_URL}/empresarios/disponibilidade`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ID_EMPRESARIO: 1, 
+          DURACAO: duracao,
+          PERIODOS: periodosString,
+          DIAS_ATIVOS: diasAtivosString,
+          BLOQUEIOS: bloqueiosString
+        })
+      });
+
+      if (response.ok) {
+        Alert.alert("Sucesso", "Configurações de agenda salvas!");
+      } else {
+        Alert.alert("Erro", "Erro ao salvar no servidor.");
+      }
+    } catch (e) {
+      Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   function abrirPicker(index: number, tipo: 'inicio' | 'fim') {
     setPeriodoIndex(index);
     setTipoPicker(tipo);
     setShowPicker(true);
   }
 
+  const alterarDuracao = (valor: number) => {
+    setDuracao(prev => {
+      const novo = prev + valor;
+      return novo > 0 ? novo : 5; 
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
 
       <Text style={styles.titulo}>Configuração</Text>
 
-      <Text style={styles.subtitulo}>Duração</Text>
+      <Text style={styles.subtitulo}>Duração do Atendimento</Text>
+      
+      <View style={styles.contadorContainer}>
+        <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(-5)}>
+          <Text style={styles.txtContador}>-</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.displayContador}>
+          <Text style={styles.txtDuracaoDisplay}>
+            {Math.floor(duracao / 60) > 0 ? `${Math.floor(duracao / 60)}h ` : ""}
+            {duracao % 60}min
+          </Text>
+        </View>
 
-      <View style={styles.linha}>
-        {[30, 60, 90, 120, 150, 180].map((d: number) => (
-          <TouchableOpacity
-            key={d}
-            style={[styles.botao, duracao === d && styles.selecionado]}
-            onPress={() => setDuracao(d)}
-          >
-            <Text style={duracao === d ? { color: '#fff' } : undefined}>
-              {d >= 60 ? `${d / 60}h` : `${d}min`}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(5)}>
+          <Text style={styles.txtContador}>+</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.subtitulo}>Horário de Funcionamento</Text>
@@ -125,32 +174,34 @@ export default function Disponibilidade() {
           ])
         }
       >
-        <Text style={{ marginTop: 10 }}>+ Adicionar Horário</Text>
+        <Text style={{ marginTop: 15, color: '#007AFF', fontWeight: 'bold' }}>+ Adicionar Horário</Text>
       </TouchableOpacity>
 
       <Calendar
+        minDate={hoje}
+        theme={{
+          textDisabledColor: '#d9e1e8',
+          todayTextColor: '#007AFF',
+          selectedDayBackgroundColor: '#000',
+        }}
+        style={{ marginTop: 20, borderRadius: 10, elevation: 2 }}
         onDayPress={(day: DateData) => {
           const dia = day.dateString;
+          
+          if (dia < hoje) return;
 
-          const novoEstado = !diasAtivos[dia]; // calcula antes
-
-          setDiasAtivos(prev => ({
-            ...prev,
-            [dia]: novoEstado
-          }));
-
+          const novoEstado = !diasAtivos[dia]; 
+          setDiasAtivos(prev => ({ ...prev, [dia]: novoEstado }));
           setDiaSelecionado(dia);
 
           if (novoEstado) {
             gerarHorarios(dia);
           } else {
-            // opcional: limpar horários ao desmarcar
             setHorariosPorDia(prev => {
               const copy = { ...prev };
               delete copy[dia];
               return copy;
             });
-
             setBloqueados(prev => {
               const copy = { ...prev };
               delete copy[dia];
@@ -158,36 +209,25 @@ export default function Disponibilidade() {
             });
           }
         }}
-          markedDates={Object.fromEntries(
-            Object.entries(diasAtivos)
-              .filter(([_, ativo]) => ativo)
-              .map(([dia]) => [
-                dia,
-                {
-                  selected: true,
-                  selectedColor: '#000'
-                }
-              ])
-          )}
+        markedDates={Object.fromEntries(
+          Object.entries(diasAtivos)
+            .filter(([_, ativo]) => ativo)
+            .map(([dia]) => [dia, { selected: true, selectedColor: '#000' }])
+        )}
       />
 
       {diaSelecionado && diasAtivos[diaSelecionado] && (
         <>
-          <Text style={styles.subtitulo}>
-            Horários de {diaSelecionado}
-          </Text>
-
+          <Text style={styles.subtitulo}>Horários de {diaSelecionado} (Toque para bloquear)</Text>
           <View style={styles.lista}>
             {(horariosPorDia[diaSelecionado] || []).map((h: string) => {
               const bloqueado = bloqueados[diaSelecionado]?.includes(h);
-
               return (
                 <TouchableOpacity
                   key={h}
                   onPress={() => {
                     setBloqueados(prev => {
                       const lista = prev[diaSelecionado] ?? [];
-
                       return {
                         ...prev,
                         [diaSelecionado]: lista.includes(h)
@@ -196,10 +236,7 @@ export default function Disponibilidade() {
                       };
                     });
                   }}
-                  style={[
-                    styles.horario,
-                    { backgroundColor: bloqueado ? '#ccc' : '#000' }
-                  ]}
+                  style={[styles.horario, { backgroundColor: bloqueado ? '#ccc' : '#000' }]}
                 >
                   <Text style={{ color: '#fff' }}>{h}</Text>
                 </TouchableOpacity>
@@ -209,14 +246,24 @@ export default function Disponibilidade() {
         </>
       )}
 
+      <TouchableOpacity 
+        style={styles.btnSalvarGeral} 
+        onPress={salvarAgenda}
+        disabled={carregando}
+      >
+        {carregando ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>SALVAR AGENDA</Text>
+        )}
+      </TouchableOpacity>
+
       {showPicker && (
         <View style={styles.pickerOverlay}>
           <View style={styles.pickerBox}>
-
             <Text style={styles.pickerTitle}>
               {tipoPicker === 'inicio' ? 'Selecionar início' : 'Selecionar fim'}
             </Text>
-
             <DateTimePicker
               value={periodos[periodoIndex][tipoPicker]}
               mode="time"
@@ -227,31 +274,19 @@ export default function Disponibilidade() {
                   setShowPicker(false);
                   return;
                 }
-
-                setPeriodos((prev: Periodo[]) => {
+                setPeriodos((prev) => {
                   const copy = [...prev];
-
-                  copy[periodoIndex] = {
-                    ...copy[periodoIndex],
-                    [tipoPicker]: selectedDate
-                  };
-
+                  copy[periodoIndex] = { ...copy[periodoIndex], [tipoPicker]: selectedDate };
                   return copy;
                 });
               }}
             />
-
-            <TouchableOpacity
-              style={styles.doneButton}
-              onPress={() => setShowPicker(false)}
-            >
+            <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
               <Text style={{ color: '#fff' }}>Concluir</Text>
             </TouchableOpacity>
-
           </View>
         </View>
       )}
-
     </ScrollView>
   );
 }
@@ -262,86 +297,96 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#ffffff'
   },
-
   titulo: {
     fontSize: 20,
     fontWeight: 'bold'
   },
-
   subtitulo: {
-    marginTop: 10,
+    marginTop: 20,
     fontWeight: 'bold'
   },
-
-  linha: {
+  contadorContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    marginTop: 10,
+    padding: 5
   },
-
-  botao: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#eee'
+  btnContador: {
+    backgroundColor: '#000',
+    width: 45,
+    height: 45,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-
-  selecionado: {
-    backgroundColor: '#000'
+  txtContador: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold'
   },
-
+  displayContador: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  txtDuracaoDisplay: {
+    fontSize: 18,
+    fontWeight: '600'
+  },
   periodo: {
     marginTop: 10
   },
-
   timeBtn: {
-    padding: 10,
+    padding: 12,
     backgroundColor: '#eee',
     borderRadius: 8,
-    marginTop: 5
+    marginTop: 8
   },
-
   lista: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     marginTop: 10
   },
-
   horario: {
     padding: 10,
     borderRadius: 10
   },
-
+  btnSalvarGeral: {
+    marginTop: 40,
+    backgroundColor: '#000',
+    padding: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 30
+  },
   pickerOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    zIndex: 1000
   },
-
   pickerBox: {
     width: '90%',
-    backgroundColor: '#000',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center'
   },
-
   pickerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#fff'
+    color: '#000'
   },
-
   doneButton: {
-    marginTop: 10,
-    backgroundColor: '#222',
-    padding: 12,
+    marginTop: 20,
+    backgroundColor: '#000',
+    padding: 15,
     borderRadius: 10,
     width: '100%',
     alignItems: 'center'

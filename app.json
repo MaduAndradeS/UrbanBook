@@ -7,10 +7,12 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "android": {
+      "usesCleartextTraffic": true
+    },
     "ios": {
       "supportsTablet": true
     },
-
     "web": {
       "output": "static"
     },
@@ -26,7 +28,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

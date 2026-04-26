@@ -1,215 +1,361 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
-  SafeAreaView,
-  ScrollView, StyleSheet,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
-// ─── MOCK DATA ────────────────────────────────────────────────
-const MOCK_EMPRESA = {
-  nome: 'Luiz Serviços Gerais',
-  telefone1: '(19) 96345 - 5167',
-  telefone2: '(19) 92738 - 5167',
-  endereco: 'Rua Moacir Cavallo, 510 · Centro, Campinas SP',
-  estrelas: 5,
-  descricao: 'Presto serviços gerais a domicílio.',
-  tags: ['Encanador', 'Eletricista', 'Marceneiro'],
-  logo: 'https://www.unisuam.edu.br/wp-content/uploads/2023/05/Design-sem-nome-2.png',
-  fotos: [
-    'https://www.minutoseguros.com.br/blog/wp-content/uploads/2022/07/instalacao-eletrica-em-predio-1.jpg',
-  ],
-  avaliacoes: [
-    {
-      id: '1',
-      usuario: 'João Victor Minelli',
-      foto: 'https://img.freepik.com/free-photo/smiling-young-male-professional-standing-with-arms-crossed-while-making-eye-contact-against-isolated-background_662251-838.jpg?semt=ais_hybrid&w=740&q=80',
-      texto: 'Luiz se mostrou excelente e com preços acessíveis.',
-      estrelas: 5,
-    },
-  ],
-};
+const API_URL = 'http://172.20.10.2:3333/api';
 
-function Stars({ count, size = 16 }: { count: number; size?: number }) {
+export default function PerfilEmpresa() {
+  const router = useRouter(); 
+  const [idEmpresario, setIdEmpresario] = useState<number | null>(null);
+
+  // ESTADOS DO PERFIL
+  const [perfilImg, setPerfilImg] = useState('https://via.placeholder.com/150');
+  const [nomeEmpresario, setNomeEmpresario] = useState('Carregando...');
+  const [bio, setBio] = useState('');
+  const [telefone, setTelefone] = useState('Não informado');
+  const [endereco, setEndereco] = useState('Endereço não cadastrado');
+  const [servicos, setServicos] = useState<any[]>([]);
+  const [fotosTrabalho, setFotosTrabalho] = useState<any[]>([]);
+  const [agenda, setAgenda] = useState<any[]>([]);
+
+  // CONTROLE
+  const [loadingInicial, setLoadingInicial] = useState(true);
+
+  // 🔹 PEGAR ID
+  useEffect(() => {
+    async function pegarId() {
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (idSalvo) {
+        setIdEmpresario(Number(idSalvo));
+      } else {
+        router.replace('/');
+      }
+    }
+    pegarId();
+  }, []);
+
+  // 🔹 CARREGAR DADOS
+  useEffect(() => {
+    if (idEmpresario) {
+      carregarTudo();
+    }
+  }, [idEmpresario]);
+
+  async function carregarTudo() {
+    try {
+      const [resP, resA] = await Promise.all([
+        fetch(`${API_URL}/empresarios/${idEmpresario}`),
+        fetch(`${API_URL}/empresarios/${idEmpresario}/disponibilidade`)
+      ]);
+
+      const dataP = await resP.json();
+
+      if (resP.ok) {
+        if (dataP.FOTO_PERFIL) setPerfilImg(dataP.FOTO_PERFIL);
+        setNomeEmpresario(dataP.NOME || 'Empresário');
+        setBio(dataP.BIO || 'Nenhuma descrição informada.');
+
+        if (dataP.TELEFONE?.length > 0)
+          setTelefone(dataP.TELEFONE[0].TELEFONE);
+
+        if (dataP.ENDERECO?.length > 0) {
+          const e = dataP.ENDERECO[0];
+          setEndereco(`${e.RUA}, ${e.NUM} - ${e.BAIRRO}`);
+        }
+
+        setServicos(dataP.SERVICOS || []);
+        setFotosTrabalho(dataP.FOTO_TRABALHO || []);
+      }
+
+      if (resA.ok) {
+        const dataA = await resA.json();
+        setAgenda(Array.isArray(dataA) ? dataA : []);
+      }
+
+    } catch (e) {
+      console.log("Erro:", e);
+    } finally {
+      setLoadingInicial(false);
+    }
+  }
+
+  // 🔹 EXCLUIR HORÁRIO
+  const handleExcluirHorario = async (idDisp: number) => {
+    Alert.alert("Excluir", "Deseja apagar este horário?", [
+      { text: "Cancelar" },
+      {
+        text: "Sim",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              `${API_URL}/empresarios/disponibilidade/${idDisp}`,
+              { method: 'DELETE' }
+            );
+
+            if (res.ok) {
+              setAgenda(prev => prev.filter(a => a.ID_DISP !== idDisp));
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      }
+    ]);
+  };
+
+  if (loadingInicial) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#67C5C0" />
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Text key={i} style={{ fontSize: size, color: i <= count ? '#FFB800' : '#ddd' }}>★</Text>
-      ))}
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <ScrollView style={styles.container}>
+        
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={{ uri: perfilImg }} style={styles.logoImg} />
+
+            <TouchableOpacity style={styles.editBtn}>
+              <MaterialCommunityIcons name="camera-plus" size={22} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.empresaNome}>{nomeEmpresario}</Text>
+
+          <View style={styles.phoneRow}>
+            <MaterialCommunityIcons name="phone" size={18} color="#fff" />
+            <Text style={styles.phoneText}>{telefone}</Text>
+          </View>
+        </View>
+
+        {/* CONTEÚDO */}
+        <View style={styles.content}>
+
+          <TouchableOpacity
+            style={styles.agendaBtn}
+            onPress={() => router.push('/Emp_Dispo')}
+          >
+            <MaterialCommunityIcons name="calendar-clock" size={24} color="#fff" />
+            <Text style={styles.agendaBtnText}>
+              Novo Horário de Atendimento
+            </Text>
+          </TouchableOpacity>
+
+          {/* AGENDA */}
+          <View style={styles.listaAgendaContainer}>
+            {agenda.map((item, i) => (
+              <View key={i} style={styles.agendaCard}>
+                <View style={styles.agendaInfo}>
+                  <View style={styles.diaBadge}>
+                    <Text style={styles.diaBadgeText}>{item.DIAS_ATIVOS}</Text>
+                  </View>
+                  <Text style={styles.horarioText}>{item.PERIODOS}</Text>
+                </View>
+
+                <TouchableOpacity onPress={() => handleExcluirHorario(item.ID_DISP)}>
+                  <MaterialCommunityIcons name="trash-can-outline" size={22} color="#ff4d4d" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Localização</Text>
+          <Text style={styles.infoText}>{endereco}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Serviços</Text>
+          <View style={styles.servicosContainer}>
+            {servicos.map((s, i) => (
+              <View key={i} style={styles.servicoTag}>
+                <Text style={styles.servicoTexto}>{s.NOME}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Sobre</Text>
+          <Text style={styles.description}>{bio}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Portfólio</Text>
+          <View style={styles.portfolioContainer}>
+            {fotosTrabalho.map((f, i) => (
+              <Image key={i} source={{ uri: f.URL }} style={styles.portfolioImg} />
+            ))}
+          </View>
+
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-export default function PerfilEmpresaScreen() {
-  const empresa = MOCK_EMPRESA;
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
 
-  return (
-    <SafeAreaView style={s.safeArea}>
-      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}><Text style={s.iconBtnText}>📋</Text></View>
-        </View>
-
-        {/* Voltar */}
-        <TouchableOpacity style={s.backBtn}>
-          <Text style={s.backText}>‹</Text>
-        </TouchableOpacity>
-
-        {/* Info principal */}
-        <View style={s.mainInfo}>
-          <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
-          <View style={s.mainInfoText}>
-            <Text style={s.empresaNome}>{empresa.nome}</Text>
-            <Text style={s.telefone}>{empresa.telefone1}    {empresa.telefone2}</Text>
-            <Text style={s.endereco}>{empresa.endereco}</Text>
-            <Stars count={empresa.estrelas} />
-          </View>
-        </View>
-
-        {/* Descrição */}
-        <Text style={s.label}>Descrição</Text>
-        <View style={s.box}>
-          <Text style={s.boxText}>{empresa.descricao}</Text>
-        </View>
-
-        {/* Tags */}
-        <Text style={s.label}>Tags</Text>
-        <View style={s.tagsBox}>
-          <View style={s.tagsRow}>
-            {empresa.tags.map(tag => (
-              <View key={tag} style={s.tag}>
-                <Text style={s.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Fotos */}
-        <Text style={s.label}>Fotos</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.fotosScroll}>
-          {empresa.fotos.map((uri, idx) => (
-            <Image key={idx} source={{ uri }} style={s.foto} resizeMode="cover" />
-          ))}
-        </ScrollView>
-
-        {/* Avaliações */}
-        <Text style={s.label}>Avaliações</Text>
-        {empresa.avaliacoes.map(av => (
-          <View key={av.id} style={s.avaliacaoCard}>
-            <Image source={{ uri: av.foto }} style={s.avaliacaoAvatar} />
-            <View style={s.avaliacaoInfo}>
-              <Text style={s.avaliacaoNome}>{av.usuario}</Text>
-              <Text style={s.avaliacaoTexto}>{av.texto}</Text>
-              <Stars count={av.estrelas} size={14} />
-            </View>
-          </View>
-        ))}
-
-        <View style={{ height: 110 }} />
-
-        <View style={s.footer}>
-        <TouchableOpacity style={s.agendarBtn}>
-          <Text style={s.agendarText}>Agendar serviço</Text>
-        </TouchableOpacity>
-      </View>
-      </ScrollView>
-
-      {/* Botão fixo */}
-      
-
-    
-    </SafeAreaView>
-  );
-}
-
-const s = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  scroll:   { flex: 1, paddingHorizontal: 20 },
-
-  topHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 16, marginBottom: 4,
+  header: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#67C5C0',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30
   },
-  brandName: { fontSize: 20, color: '#999', fontWeight: '400' },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: 8,
-    borderWidth: 1, borderColor: '#ddd',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconBtnText: { fontSize: 18 },
 
-  backBtn: { marginBottom: 12 },
-  backText: { fontSize: 28, color: '#444', lineHeight: 32 },
+  logoContainer: { position: 'relative' },
 
-  mainInfo: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 14, marginBottom: 20,
-  },
   logoImg: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#f0f0f0',
-  },
-  mainInfoText: { flex: 1, gap: 3 },
-  empresaNome:  { fontSize: 17, fontWeight: 'bold', color: '#111' },
-  telefone:     { fontSize: 11, color: '#555' },
-  endereco:     { fontSize: 11, color: '#555', marginBottom: 4 },
-
-  label: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 6, marginTop: 4 },
-
-  box: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 12, marginBottom: 16,
-  },
-  boxText: { fontSize: 13, color: '#333' },
-
-  tagsBox: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 12, marginBottom: 16,
-  },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: {
-    backgroundColor: '#67C5C0', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  tagText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  fotosScroll: { marginBottom: 16 },
-  foto: {
-    width: 260, height: 180, borderRadius: 12,
-    marginRight: 12, backgroundColor: '#eee',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 4,
+    borderColor: '#fff'
   },
 
-  avaliacaoCard: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 12, marginBottom: 14,
+  editBtn: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#FFB800',
+    padding: 10,
+    borderRadius: 25
   },
-  avaliacaoAvatar: {
-    width: 44, height: 44, borderRadius: 22,
+
+  empresaNome: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 15
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5
+  },
+
+  phoneText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 8
+  },
+
+  content: { padding: 20 },
+
+  agendaBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#FFB800',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  agendaBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 10
+  },
+
+  listaAgendaContainer: { marginTop: 15 },
+
+  agendaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8
+  },
+
+  agendaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+
+  diaBadge: {
+    backgroundColor: '#67C5C0',
+    padding: 5,
+    borderRadius: 5,
+    marginRight: 10
+  },
+
+  diaBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold'
+  },
+
+  horarioText: { fontWeight: 'bold' },
+
+  divider: {
+    height: 1,
     backgroundColor: '#eee',
+    marginVertical: 20
   },
-  avaliacaoInfo:  { flex: 1, gap: 2 },
-  avaliacaoNome:  { fontSize: 14, fontWeight: '700', color: '#111' },
-  avaliacaoTexto: { fontSize: 12, color: '#555' },
 
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: '#fff',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10
   },
-  agendarBtn: {
-    backgroundColor: '#67C5C0', borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center',
-  },
-  agendarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
-  tabBar: {
-    flexDirection: 'row', height: 64,
-    backgroundColor: '#67C5C0', alignItems: 'center', paddingBottom: 4,
+  infoText: { color: '#666' },
+
+  servicosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  tabIcon: { fontSize: 22 },
+
+  servicoTag: {
+    backgroundColor: '#E8F5F5',
+    padding: 8,
+    borderRadius: 15,
+    marginRight: 8,
+    marginBottom: 8
+  },
+
+  servicoTexto: {
+    color: '#008080',
+    fontWeight: 'bold'
+  },
+
+  description: {
+    color: '#666',
+    lineHeight: 20
+  },
+
+  portfolioContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
+  },
+
+  portfolioImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 10,
+    marginBottom: 10
+  }
 });

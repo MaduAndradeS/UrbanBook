@@ -1,18 +1,11 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import {
   Dimensions,
   Image,
-  Modal,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
-import logo from '../../assets/images/logo.png';
+import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -25,7 +18,9 @@ export default function App() {
         <View style={styles.top}>
           <Image
             source={logo}
-            style={{ marginTop: 60, width: 180, height: 180 }}
+            style={{ marginTop: 0,
+    width: 180,
+    height: 180, marginBottom: 10 }}
           />
           
         </View>

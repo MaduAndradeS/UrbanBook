@@ -292,6 +292,13 @@ exports.buscarDisponibilidade = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
+    // 🔥 VALIDAÇÃO CRÍTICA
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        message: 'ID inválido'
+      });
+    }
+
     const disponibilidade = await empresarioService.buscarDisponibilidadePorId(id);
 
     if (!disponibilidade) {
@@ -302,6 +309,7 @@ exports.buscarDisponibilidade = async (req, res) => {
 
     return res.status(200).json(disponibilidade);
   } catch (error) {
+    console.error("Erro real:", error); // 👈 IMPORTANTE
     return res.status(500).json({
       message: 'Erro ao buscar disponibilidade',
       error: error.message

@@ -69,6 +69,15 @@ export default function TabLayout() {
         ),
       }}
      />
+     <Tabs.Screen
+        name="perfil-empresa"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={32} name="circle" color={color} />
+        ),
+      }}
+     />
     </Tabs>
   );
 }

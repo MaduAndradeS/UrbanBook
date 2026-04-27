@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = 'http://172.20.10.2:3333/api';
+import { API_URL } from '../../config/api';
 
 export default function PerfilEmpresa() {
   const router = useRouter(); 
@@ -32,51 +32,56 @@ export default function PerfilEmpresa() {
   // CONTROLE
   const [loadingInicial, setLoadingInicial] = useState(true);
 
-  // 🔹 PEGAR ID
-  useEffect(() => {
-    async function pegarId() {
-      const idSalvo = await AsyncStorage.getItem('id_usuario');
-      if (idSalvo) {
-        setIdEmpresario(Number(idSalvo));
-      } else {
-        router.replace('/');
-      }
-    }
-    pegarId();
-  }, []);
 
   // 🔹 CARREGAR DADOS
-  useEffect(() => {
-    if (idEmpresario) {
-      carregarTudo();
-    }
-  }, [idEmpresario]);
+useEffect(() => {
+  let isMounted = true;
 
-  async function carregarTudo() {
+  async function init() {
     try {
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+
+      if (!isMounted) return;
+
+      if (!idSalvo) {
+        router.replace('/');
+        return;
+      }
+
+      const id = Number(idSalvo);
+
       const [resP, resA] = await Promise.all([
-        fetch(`${API_URL}/empresarios/${idEmpresario}`),
-        fetch(`${API_URL}/empresarios/${idEmpresario}/disponibilidade`)
+        fetch(`${API_URL}/empresarios/${id}`),
+        fetch(`${API_URL}/empresarios/${id}/disponibilidade`)
       ]);
+
+      if (!isMounted) return;
 
       const dataP = await resP.json();
 
       if (resP.ok) {
-        if (dataP.FOTO_PERFIL) setPerfilImg(dataP.FOTO_PERFIL);
-        setNomeEmpresario(dataP.NOME || 'Empresário');
-        setBio(dataP.BIO || 'Nenhuma descrição informada.');
+  setNomeEmpresario(dataP.NOME || 'Empresário');
+  setBio(dataP.BIO || '');
 
-        if (dataP.TELEFONE?.length > 0)
-          setTelefone(dataP.TELEFONE[0].TELEFONE);
+  // FOTO
+  if (dataP.FOTO_PERFIL) {
+    setPerfilImg(dataP.FOTO_PERFIL);
+  }
 
-        if (dataP.ENDERECO?.length > 0) {
-          const e = dataP.ENDERECO[0];
-          setEndereco(`${e.RUA}, ${e.NUM} - ${e.BAIRRO}`);
-        }
+  // TELEFONE
+  if (dataP.TELEFONE?.length > 0) {
+    setTelefone(dataP.TELEFONE[0].TELEFONE);
+  }
 
-        setServicos(dataP.SERVICOS || []);
-        setFotosTrabalho(dataP.FOTO_TRABALHO || []);
-      }
+  // ENDEREÇO
+  if (dataP.ENDERECO?.length > 0) {
+    const e = dataP.ENDERECO[0];
+    setEndereco(`${e.RUA}, ${e.NUM} - ${e.BAIRRO}`);
+  }
+
+  setServicos(dataP.SERVICOS || []);
+  setFotosTrabalho(dataP.FOTO_TRABALHO || []);
+}
 
       if (resA.ok) {
         const dataA = await resA.json();
@@ -84,11 +89,18 @@ export default function PerfilEmpresa() {
       }
 
     } catch (e) {
-      console.log("Erro:", e);
+      console.log(e);
     } finally {
-      setLoadingInicial(false);
+      if (isMounted) setLoadingInicial(false);
     }
   }
+
+  init();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   // 🔹 EXCLUIR HORÁRIO
   const handleExcluirHorario = async (idDisp: number) => {

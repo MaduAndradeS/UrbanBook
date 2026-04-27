@@ -15,7 +15,6 @@ import { Calendar } from 'react-native-calendars';
 
 const API_URL = 'http://192.168.0.225:3333/api';
 
-// Mapeamento dos dias da semana (0 = Domingo, 1 = Segunda, etc.)
 const MAPA_DIAS_SEMANA: { [key: string]: number } = {
   'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6
 };
@@ -25,7 +24,7 @@ export default function Cliente_Datas() {
   const idEmpresario = params.id;
 
   const [loading, setLoading] = useState(true);
-  const [configList, setConfigList] = useState<any[]>([]); // Agora guarda a lista toda de agendas
+  const [configList, setConfigList] = useState<any[]>([]);
   const [diasHabilitadosCalendario, setDiasHabilitadosCalendario] = useState<string[]>([]);
   
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
@@ -35,8 +34,6 @@ export default function Cliente_Datas() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [sucesso, setSucesso] = useState(false);
-  
-  // Perfil rápido
   const [nomeProfissional, setNomeProfissional] = useState('Profissional');
 
   useEffect(() => {
@@ -51,7 +48,6 @@ export default function Cliente_Datas() {
     }
   }, [diaSelecionado]);
 
-  // Busca o nome para ficar bonitinho
   async function fetchPerfil() {
     const idReal = idEmpresario || 5;
     try {
@@ -64,7 +60,7 @@ export default function Cliente_Datas() {
   }
 
   async function fetchConfig() {
-    const idReal = idEmpresario || 5; // Usando o 5 que criamos o teste
+    const idReal = idEmpresario || 5; 
     try {
       const response = await fetch(`${API_URL}/empresarios/${idReal}/disponibilidade`);
       
@@ -74,23 +70,35 @@ export default function Cliente_Datas() {
       }
 
       const dataAgenda = await response.json();
-      const listaAgendas = Array.isArray(dataAgenda) ? dataAgenda : (dataAgenda.disponibilidade || []);
+      
+      // 🟢 CORREÇÃO: Ensina a tela a ler o Objeto Solto do backend
+      let listaAgendas: any[] = [];
+      if (Array.isArray(dataAgenda)) {
+        listaAgendas = dataAgenda;
+      } else if (dataAgenda && dataAgenda.disponibilidade) {
+        listaAgendas = dataAgenda.disponibilidade;
+      } else if (dataAgenda && dataAgenda.ID_DISP) {
+        listaAgendas = [dataAgenda]; 
+      }
+
       setConfigList(listaAgendas);
 
-      // 🟢 MÁGICA DOS DIAS: Transforma "Seg, Ter" em datas reais (Ex: 2026-04-27, 2026-04-28)
+      // 🟢 MÁGICA DOS DIAS: Transforma "Seg, Ter" em datas clicáveis no calendário
       if (listaAgendas.length > 0) {
         const datasCalculadas: string[] = [];
-        const diasSemanasAtivos = listaAgendas.map((item: any) => item.DIAS_ATIVOS.trim());
+        const diasSemanasAtivos = listaAgendas.map((item: any) => item.DIAS_ATIVOS?.trim());
         const numerosDiasAtivos = diasSemanasAtivos.map((diaExtenso: string) => MAPA_DIAS_SEMANA[diaExtenso]);
 
-        // Calcula pros próximos 60 dias
         const hoje = new Date();
         for (let i = 0; i < 60; i++) {
-          const dataFutura = new Date(hoje);
-          dataFutura.setDate(hoje.getDate() + i);
+          // Cria a data de forma segura ignorando o fuso horário (UTC bug)
+          const dataFutura = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i);
           
           if (numerosDiasAtivos.includes(dataFutura.getDay())) {
-            datasCalculadas.push(dataFutura.toISOString().split('T')[0]);
+            const ano = dataFutura.getFullYear();
+            const mes = String(dataFutura.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataFutura.getDate()).padStart(2, '0');
+            datasCalculadas.push(`${ano}-${mes}-${dia}`);
           }
         }
         setDiasHabilitadosCalendario(datasCalculadas);
@@ -136,7 +144,7 @@ export default function Cliente_Datas() {
       if (response.ok) {
         setModalVisible(false);
         setSucesso(true);
-        buscarOcupados(); // Atualiza a grade pra bloquear o horário clicado
+        buscarOcupados(); 
       } else {
         Alert.alert("Erro", "Erro ao processar agendamento.");
       }
@@ -148,13 +156,11 @@ export default function Cliente_Datas() {
   function gerarGradeHorarios() {
     if (!diaSelecionado || configList.length === 0) return;
 
-    // Descobre que dia da semana é a data clicada
-    const dataObj = new Date(`${diaSelecionado}T12:00:00Z`); // Força UTC pra não bugar o fuso
-    const diaSemanaNumero = dataObj.getUTCDay(); // 0 a 6
+    const dataObj = new Date(`${diaSelecionado}T12:00:00Z`); 
+    const diaSemanaNumero = dataObj.getUTCDay(); 
     const nomeDiaSemana = Object.keys(MAPA_DIAS_SEMANA).find(key => MAPA_DIAS_SEMANA[key] === diaSemanaNumero);
 
-    // Pega a configuração de horário específica desse dia (ex: Se for Seg, pega os horários da Seg)
-    const configDoDia = configList.find((item) => item.DIAS_ATIVOS.trim() === nomeDiaSemana);
+    const configDoDia = configList.find((item) => item.DIAS_ATIVOS?.trim() === nomeDiaSemana);
 
     if (!configDoDia || !configDoDia.PERIODOS) {
       setHorariosDisponiveis([]);
@@ -164,7 +170,6 @@ export default function Cliente_Datas() {
     const lista: string[] = [];
     const duracao = configDoDia.DURACAO_MIN || 30;
     
-    // Tratamento para "08:00 às 12:00" em vez de "08:00-12:00"
     const periodosLimpos = configDoDia.PERIODOS.replace(' às ', '-').split(',');
 
     periodosLimpos.forEach((p: string) => {
@@ -197,7 +202,6 @@ export default function Cliente_Datas() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
 
-  // Prepara as marcações do Calendário usando as datas calculadas
   const marked: any = {};
   diasHabilitadosCalendario.forEach((dataReal: string) => {
     marked[dataReal] = { marked: true, dotColor: '#67C5C0' };

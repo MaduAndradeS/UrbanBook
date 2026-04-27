@@ -8,9 +8,13 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image
 } from 'react-native';
+import logo from '../../assets/images/logo.png';
 
-// ─── TIPOS ────────────────────────────────────────────────────
+const API_URL = 'http://192.168.0.225:3333/api';
+const ID_EMPRESARIO = 5;
+
 type Status = 'confirmado' | 'pendente';
 
 interface Appointment {
@@ -25,52 +29,6 @@ interface Appointment {
   year: number;
 }
 
-interface Notificacao {
-  id: string;
-  titulo: string;
-  mensagem: string;
-  hora: string;
-  lida: boolean;
-}
-
-// ─── MOCK DATA ────────────────────────────────────────────────
-const MOCK_DATA: Appointment[] = [
-  {
-    id: '1', name: 'Pedro Cardoso', date: 'Quarta, 10 Mar',
-    time: '10:00 - 11:00', service: 'Hidratação e corte de cabelo',
-    status: 'confirmado', day: 10, month: 2, year: 2025,
-  },
-  {
-    id: '2', name: 'João Vitor Minelli', date: 'Quarta, 10 Mar',
-    time: '13:00 - 14:00', service: 'Corte de Cabelo',
-    status: 'confirmado', day: 10, month: 2, year: 2025,
-  },
-  {
-    id: '3', name: 'Ana Lima', date: 'Sexta, 14 Mar',
-    time: '15:00 - 16:00', service: 'Escova progressiva',
-    status: 'pendente', day: 14, month: 2, year: 2025,
-  },
-];
-
-const MOCK_NOTIFICACOES: Notificacao[] = [
-  {
-    id: '1', titulo: 'Novo agendamento',
-    mensagem: 'Pedro Cardoso agendou um horário para 10/03 às 10:00.',
-    hora: '08:30', lida: false,
-  },
-  {
-    id: '2', titulo: 'Agendamento confirmado',
-    mensagem: 'João Vitor Minelli confirmou presença para 10/03 às 13:00.',
-    hora: '09:15', lida: false,
-  },
-  {
-    id: '3', titulo: 'Lembrete',
-    mensagem: 'Você tem 2 atendimentos amanhã. Prepare-se!',
-    hora: 'Ontem', lida: true,
-  },
-];
-
-// ─── HELPERS ─────────────────────────────────────────────────
 function filterByMonth(data: Appointment[], month: number, year: number) {
   return data.filter(a => a.month === month && a.year === year);
 }
@@ -82,150 +40,145 @@ function pendingOnlyDays(data: Appointment[]) {
   return data.filter(a => a.status === 'pendente' && !confirmed.has(a.day)).map(a => a.day);
 }
 
-// ─── TELA ─────────────────────────────────────────────────────
-const INITIAL_YEAR  = 2025;
-const INITIAL_MONTH = 2;
+const INITIAL_YEAR  = 2026;
+const INITIAL_MONTH = 3; 
 
 export default function AtendimentosScreen() {
   const [year, setYear]             = useState(INITIAL_YEAR);
   const [month, setMonth]           = useState(INITIAL_MONTH);
-  const [selectedDay, setDay]       = useState(10);
+  const [selectedDay, setDay]       = useState(new Date().getDate());
   const [monthData, setMonthData]   = useState<Appointment[]>([]);
   const [loading, setLoading]       = useState(true);
   const [notifVisible, setNotifVisible] = useState(false);
-  const [notificacoes, setNotificacoes] = useState<Notificacao[]>(MOCK_NOTIFICACOES);
+  const [notificacoes, setNotificacoes] = useState<Appointment[]>([]);
 
-  const naoLidas = notificacoes.filter(n => !n.lida).length;
+  const naoLidas = notificacoes.length;
 
   useEffect(() => {
-    setLoading(true);
-    const data = filterByMonth(MOCK_DATA, month, year);
-    setMonthData(data);
-    setLoading(false);
+    buscarDoBanco();
   }, [month, year]);
 
-  const handleMonthChange = (m: number, y: number) => {
-    setMonth(m); setYear(y); setDay(1);
-  };
+  async function buscarDoBanco() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/agendamentos/empresario/${ID_EMPRESARIO}`);
+      if (res.ok) {
+        const banco = await res.json();
+        const dadosSeguros = Array.isArray(banco) ? banco : [];
+        const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {
+          const d = new Date(ag.dataInteira || ag.DATA_HORA || new Date());
+          return {
+            id: String(ag.id),
+            name: ag.cliente || 'Sem nome',
+            date: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth()+1).padStart(2, '0')}/${d.getUTCFullYear()}`,
+            time: ag.hora || '00:00',
+            service: ag.servico || 'Serviço',
+            status: (ag.status || '').toLowerCase() === 'confirmado' ? 'confirmado' : 'pendente',
+            day: d.getUTCDate(),
+            month: d.getUTCMonth(),
+            year: d.getUTCFullYear()
+          };
+        });
+        setMonthData(filterByMonth(convertidos, month, year));
+        setNotificacoes(convertidos.filter(a => a.status === 'pendente'));
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const marcarTodasLidas = () => {
-    setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+  const responderAgendamento = async (id: string, acao: 'aprovar' | 'rejeitar') => {
+    try {
+      const metodo = acao === 'aprovar' ? 'PUT' : 'DELETE';
+      const res = await fetch(`${API_URL}/agendamentos/${id}/${acao}`, { method: metodo });
+      if (res.ok) {
+        setNotifVisible(false);
+        buscarDoBanco();
+      }
+    } catch (e) {
+      console.log(e);
+    }
   };
-
-  const dayAppointments = monthData.filter(a => a.day === selectedDay);
 
   return (
     <SafeAreaView style={s.safeArea}>
-
-      {/* ── Painel de Notificações (Modal) ── */}
-      <Modal
-        visible={notifVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNotifVisible(false)}
-      >
-        <Pressable style={s.modalOverlay} onPress={() => setNotifVisible(false)}>
-          {/* Impede que o toque dentro do painel feche o modal */}
-          <Pressable style={s.notifPanel} onPress={() => {}}>
-            <View style={s.notifHeader}>
-              <Text style={s.notifTitle}>Notificações</Text>
-              {naoLidas > 0 && (
-                <TouchableOpacity onPress={marcarTodasLidas}>
-                  <Text style={s.notifMarkAll}>Marcar todas como lidas</Text>
-                </TouchableOpacity>
-              )}
+      
+      {/* 🟢 CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
+      <View style={s.headerGlobalSimulado}>
+         <View style={s.headerInner}>
+            <Text style={s.urbanText}>Urban Book</Text>
+            <View style={s.headerIcons}>
+               <TouchableOpacity 
+                 style={s.notifBtn} 
+                 onPress={() => setNotifVisible(true)}
+                 activeOpacity={0.5}
+               >
+                 <Text style={{ fontSize: 24 }}>🔔</Text>
+                 {naoLidas > 0 && (
+                   <View style={s.badge}><Text style={s.badgeText}>{naoLidas}</Text></View>
+                 )}
+               </TouchableOpacity>
+               <Image source={logo} style={s.logoImage} />
             </View>
+         </View>
+      </View>
 
+      <Modal visible={notifVisible} transparent animationType="fade">
+        <Pressable style={s.modalOverlay} onPress={() => setNotifVisible(false)}>
+          <View style={s.notifPanel}>
+            <Text style={s.notifTitle}>Solicitações Pendentes</Text>
             {notificacoes.map(n => (
-              <TouchableOpacity
-                key={n.id}
-                style={[s.notifItem, !n.lida && s.notifItemUnread]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  setNotificacoes(prev =>
-                    prev.map(x => x.id === n.id ? { ...x, lida: true } : x)
-                  )
-                }
-              >
-                <View style={s.notifItemLeft}>
-                  {!n.lida && <View style={s.notifDot} />}
+              <View key={n.id} style={s.notifItem}>
+                <Text style={s.notifItemTitulo}>Solicitação de {n.name}</Text>
+                <Text style={s.notifItemMsg}>{n.date} às {n.time}</Text>
+                <View style={s.actionsRow}>
+                  <TouchableOpacity style={s.btnAprovar} onPress={() => responderAgendamento(n.id, 'aprovar')}>
+                    <Text style={s.btnTextNotif}>✓ Aprovar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.btnRecusar} onPress={() => responderAgendamento(n.id, 'rejeitar')}>
+                    <Text style={s.btnTextNotif}>✕ Recusar</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={s.notifItemBody}>
-                  <View style={s.notifItemTop}>
-                    <Text style={s.notifItemTitulo}>{n.titulo}</Text>
-                    <Text style={s.notifItemHora}>{n.hora}</Text>
-                  </View>
-                  <Text style={s.notifItemMsg}>{n.mensagem}</Text>
-                </View>
-              </TouchableOpacity>
+              </View>
             ))}
-
-            {notificacoes.length === 0 && (
-              <Text style={s.notifEmpty}>Nenhuma notificação.</Text>
-            )}
-          </Pressable>
+            {notificacoes.length === 0 && <Text style={s.notifEmpty}>Nenhuma solicitação nova.</Text>}
+          </View>
         </Pressable>
       </Modal>
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-      
-
-        <View style={s.headerRow}>
-
-          {/* TÍTULO */}
-          <Text style={s.pageTitle}>Meus Atendimentos</Text>
-          {/* SININHO (esquerda) */}
-          <TouchableOpacity style={s.iconBtn} onPress={() => setNotifVisible(true)}>
-            <Text style={s.iconBtnText}>🔔</Text>
-            {naoLidas > 0 && (
-              <View style={s.badge}>
-                <Text style={s.badgeText}>{naoLidas}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Calendário */}
+        <Text style={s.sectionTitleMain}>Meus Atendimentos</Text>
+        
         <View style={s.calendarCard}>
-          {loading
-            ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} />
-            : (
-              <Calendar
-                initialYear={INITIAL_YEAR}
-                initialMonth={INITIAL_MONTH}
-                selectedDay={selectedDay}
-                onSelectDay={(day) => setDay(day)}
-                onMonthChange={handleMonthChange}
-                confirmedDays={confirmedDays(monthData)}
-                pendingDays={pendingOnlyDays(monthData)}
-              />
-            )
-          }
+          {loading ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} /> : (
+            <Calendar 
+              initialYear={INITIAL_YEAR} 
+              initialMonth={INITIAL_MONTH} 
+              selectedDay={selectedDay} 
+              onSelectDay={(day) => setDay(day)} 
+              onMonthChange={(m, y) => { setMonth(m); setYear(y); setDay(1); }} 
+              confirmedDays={confirmedDays(monthData)} 
+              pendingDays={pendingOnlyDays(monthData)} 
+            />
+          )}
         </View>
 
-        {/* Atendimentos do dia */}
-        <Text style={s.sectionTitle}>
-          {dayAppointments.length > 0
-            ? `Atendimentos do dia ${selectedDay}`
-            : `Nenhum atendimento no dia ${selectedDay}`}
-        </Text>
+        <Text style={s.sectionTitle}>Atendimentos do dia {selectedDay}</Text>
 
-        {dayAppointments.map(item => (
-          <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
-            <View style={s.avatarCircle}>
-              <Text style={s.avatarInitial}>{item.name.charAt(0)}</Text>
-            </View>
+        {monthData.filter(a => a.day === selectedDay).map(item => (
+          <View key={item.id} style={s.card}>
+            <View style={s.avatarCircle}><Text style={s.avatarInitial}>{item.name.charAt(0)}</Text></View>
             <View style={s.cardInfo}>
               <Text style={s.cardName}>{item.name}</Text>
               <Text style={s.cardDate}>{item.date} • {item.time}</Text>
-              <Text style={s.cardService}>{item.service}</Text>
               <Text style={[s.cardStatus, { color: item.status === 'confirmado' ? '#2DC26B' : '#F5A623' }]}>
-                {item.status === 'confirmado' ? '✓  Confirmado' : '⏱  Pendente'}
+                {item.status === 'confirmado' ? '✓ Confirmado' : '⏱ Pendente'}
               </Text>
             </View>
-          </TouchableOpacity>
+          </View>
         ))}
-
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
@@ -234,101 +187,36 @@ export default function AtendimentosScreen() {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  scroll:   { flex: 1, paddingHorizontal: 20 },
-
-  topHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 16, marginBottom: 4,
-  },
-  brandName:   { fontSize: 20, color: '#999', fontWeight: '400' },
-  headerIcons: { flexDirection: 'row', gap: 8 },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: 8,
-    borderWidth: 1, borderColor: '#ddd',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconBtnText: { fontSize: 18 },
-
-  headerRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-
-  // Badge vermelho no sininho
-  badge: {
-    position: 'absolute', top: -5, right: -5,
-    backgroundColor: '#E53935', borderRadius: 8,
-    minWidth: 16, height: 16,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
+  // PaddingTop ajustado para o cabeçalho novo não encostar no topo da tela do celular
+  headerGlobalSimulado: { backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+  urbanText: { fontSize: 30, fontWeight: 'bold', color: '#757575' },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  logoImage: { width: 65, height: 60 },
+  notifBtn: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 2, right: 2, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
 
-  pageTitle: {
-    fontSize: 26, fontWeight: 'bold', color: '#111',
-    marginTop: 10, marginBottom: 18, marginRight:50
-  },
-
-  calendarCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 24,
-    shadowColor: '#000', shadowOpacity: 0.05,
-    shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
-
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
-
-  card: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14,
-    padding: 14, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.06,
-    shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3,
-    alignItems: 'center',
-  },
-  avatarCircle: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#67C5C0',
-    alignItems: 'center', justifyContent: 'center', marginRight: 14,
-  },
-  avatarInitial: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-  cardInfo:      { flex: 1 },
-  cardName:      { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 3 },
-  cardDate:      { fontSize: 12, color: '#777', marginBottom: 3 },
-  cardService:   { fontSize: 12, color: '#555', fontStyle: 'italic', marginBottom: 3 },
-  cardStatus:    { fontSize: 13, fontWeight: '600' },
-
-  // ── Modal de notificações ──
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-start', alignItems: 'flex-end',
-    paddingTop: 70, paddingRight: 16,
-  },
-  notifPanel: {
-    backgroundColor: '#fff', borderRadius: 16, width: 300,
-    paddingVertical: 12,
-    shadowColor: '#000', shadowOpacity: 0.15,
-    shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
-  },
-  notifHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingHorizontal: 16, marginBottom: 8,
-  },
-  notifTitle:   { fontSize: 15, fontWeight: '700', color: '#111' },
-  notifMarkAll: { fontSize: 11, color: '#67C5C0', fontWeight: '600' },
-
-  notifItem: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0',
-  },
-  notifItemUnread: { backgroundColor: '#f5fffe' },
-  notifItemLeft:   { width: 16, alignItems: 'center', paddingTop: 4 },
-  notifDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#67C5C0',
-  },
-  notifItemBody:  { flex: 1 },
-  notifItemTop:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-  notifItemTitulo:{ fontSize: 13, fontWeight: '700', color: '#111', flex: 1 },
-  notifItemHora:  { fontSize: 11, color: '#aaa', marginLeft: 8 },
-  notifItemMsg:   { fontSize: 12, color: '#666', lineHeight: 17 },
-
-  notifEmpty: { textAlign: 'center', color: '#aaa', padding: 20, fontSize: 13 },
+  scroll: { flex: 1, paddingHorizontal: 20 },
+  sectionTitleMain: { fontSize: 26, fontWeight: 'bold', color: '#111', marginTop: 10, marginBottom: 15 },
+  calendarCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 15 },
+  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 15, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, alignItems: 'center' },
+  avatarCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#67C5C0', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  avatarInitial: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  cardInfo: { flex: 1 },
+  cardName: { fontSize: 15, fontWeight: '700' },
+  cardDate: { fontSize: 12, color: '#777', marginVertical: 2 },
+  cardStatus: { fontSize: 13, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  notifPanel: { backgroundColor: '#fff', borderRadius: 16, width: '85%', padding: 20 },
+  notifTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
+  notifItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  notifItemTitulo: { fontWeight: '700', fontSize: 14 },
+  notifItemMsg: { fontSize: 13, color: '#666', marginTop: 2 },
+  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  btnAprovar: { backgroundColor: '#2DC26B', padding: 8, borderRadius: 6, flex: 1, alignItems: 'center' },
+  btnRecusar: { backgroundColor: '#E53935', padding: 8, borderRadius: 6, flex: 1, alignItems: 'center' },
+  btnTextNotif: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  notifEmpty: { textAlign: 'center', padding: 20, color: '#999' }
 });

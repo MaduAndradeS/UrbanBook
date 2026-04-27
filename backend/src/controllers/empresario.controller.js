@@ -1,10 +1,15 @@
 const empresarioService = require('../services/empresario.service');
 const cloudinary = require('cloudinary').v2;
-const prisma = require('../lib/prisma');
+
+const {
+  buscarEnderecoPorCep,
+  buscarLatitudeLongitude
+} = require('../utils/localizacao.utils');
 
 const {
   limparNumeros,
   validarCNPJ,
+  validarEmail,
   validarCEP,
   validarTelefone
 } = require('../utils/validacoes');
@@ -89,10 +94,6 @@ exports.criarEmpresario = async (req, res) => {
       cnpj,
       email,
       senha,
-      rua,
-      bairro,
-      cidade,
-      estado,
       cep,
       telefone,
       servicos
@@ -103,10 +104,6 @@ exports.criarEmpresario = async (req, res) => {
       !cnpj ||
       !email ||
       !senha ||
-      !rua ||
-      !bairro ||
-      !cidade ||
-      !estado ||
       !cep ||
       !telefone
     ) {
@@ -130,6 +127,13 @@ exports.criarEmpresario = async (req, res) => {
       });
     }
 
+    if (!validarEmail(email)) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Email inválido'
+      });
+    }
+
     if (!validarCEP(cep)) {
       await apagarImagemCloudinary(req);
       return res.status(400).json({
@@ -144,13 +148,34 @@ exports.criarEmpresario = async (req, res) => {
       });
     }
 
+    const cepLimpo = limparNumeros(cep);
+
+    const enderecoCep = await buscarEnderecoPorCep(cepLimpo);
+    const coordenadas = await buscarLatitudeLongitude(enderecoCep);
+
+    if (!coordenadas) {
+      await apagarImagemCloudinary(req);
+      return res.status(400).json({
+        message: 'Não foi possível localizar este endereço no mapa'
+      });
+    }
+
     const fotoPerfilUrl = req.file ? req.file.path : null;
 
     const bodyTratado = {
       ...req.body,
       cnpj: limparNumeros(cnpj),
-      cep: limparNumeros(cep),
+      cep: enderecoCep.cep,
       telefone: limparNumeros(telefone),
+
+      rua: enderecoCep.rua,
+      bairro: enderecoCep.bairro,
+      cidade: enderecoCep.cidade,
+      estado: enderecoCep.estado,
+
+      latitude: coordenadas.latitude,
+      longitude: coordenadas.longitude,
+
       foto_perfil: fotoPerfilUrl
     };
 
@@ -283,30 +308,28 @@ exports.buscarDisponibilidade = async (req, res) => {
     });
   }
 };
-// 🔐 LOGIN DO EMPRESÁRIO
-exports.loginEmpresario = async (req, res) => {
+
+exports.listarEmpresariosProximos = async (req, res) => {
   try {
-    const { email, senha } = req.body;
+    const { lat, lng, raio } = req.query;
 
-    // Busca o empresário no banco (ajuste o SENHA_HASH se vcs usarem outro nome)
-    const empresario = await prisma.eMPRESARIO.findFirst({
-      where: { EMAIL: email, SENHA_HASH: senha } 
-    });
-
-    if (!empresario) {
-      return res.status(401).json({ error: "E-mail ou senha incorretos." });
+    if (!lat || !lng) {
+      return res.status(400).json({
+        message: 'Latitude e longitude são obrigatórias'
+      });
     }
 
-    // REGRA DA JÚLIA: Bloquear se não estiver aprovado
-    if (empresario.ID_ADM === null) {
-      return res.status(403).json({ error: "Sua conta ainda não foi aprovada pela administração!" });
-    }
+    const empresarios = await empresarioService.listarEmpresariosProximos(
+      Number(lat),
+      Number(lng),
+      raio ? Number(raio) : 10
+    );
 
-    // Se deu tudo certo, devolve o ID dele
-    return res.status(200).json({ id: empresario.ID_EMPRESARIO, tipo: 'empresario' });
-
+    return res.status(200).json(empresarios.map(removerSenha));
   } catch (error) {
-    console.error("Erro no login:", error);
-    return res.status(500).json({ error: "Erro interno do servidor" });
+    return res.status(500).json({
+      message: 'Erro ao buscar empresários próximos',
+      error: error.message
+    });
   }
 };

@@ -11,17 +11,19 @@ const empresarioController = require('../controllers/empresario.controller');
 router.post('/', upload.single('foto'), empresarioController.criarEmpresario);
 router.get('/', empresarioController.listarEmpresarios);
 router.get('/pendentes', empresarioController.listarEmpresariosPendentes);
-router.post('/login', empresarioController.loginEmpresario);
+
+//  REMOVIDO login daqui
 
 // --- 2. ROTAS ESPECÍFICAS ---
+router.get('/proximos', empresarioController.listarEmpresariosProximos);
 router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade);
 router.post('/disponibilidade', empresarioController.configurarDisponibilidade);
 router.patch('/:id/aprovar', empresarioController.aprovarEmpresario);
 
-//  BUSCA GENÉRICA ---
+// --- BUSCA POR ID (SEMPRE POR ÚLTIMO) ---
 router.get('/:id', empresarioController.buscarEmpresarioPorId);
 
-// FOTO PERFIL 
+// FOTO PERFIL
 router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.body;
@@ -49,7 +51,7 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   }
 });
 
-// FOTO TRABALHO 
+// FOTO TRABALHO
 router.post('/trabalhos/fotos', upload.single('foto'), async (req, res) => {
   try {
     const { id_empresario } = req.body;

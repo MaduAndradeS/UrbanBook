@@ -70,10 +70,10 @@ export default function PerfilUsuarioScreen() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.topHeader}>
-          <Text style={s.brandName}>Urban Book</Text>
-          <View style={s.iconBtn}><Text style={s.iconBtnText}>📋</Text></View>
+        {/* ── Header (estilo PerfilCliente) ── */}
+        <View style={s.headerContainer}>
+          <Text style={s.header}>Urban Book</Text>
+          <Image source={logo} style={s.topIcon} />
         </View>
 
         {/* ── Perfil: avatar centralizado + nome + editar ── */}

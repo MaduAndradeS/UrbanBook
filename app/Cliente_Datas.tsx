@@ -71,7 +71,6 @@ export default function Cliente_Datas() {
 
       const dataAgenda = await response.json();
       
-      // 🟢 CORREÇÃO: Ensina a tela a ler o Objeto Solto do backend
       let listaAgendas: any[] = [];
       if (Array.isArray(dataAgenda)) {
         listaAgendas = dataAgenda;
@@ -83,7 +82,6 @@ export default function Cliente_Datas() {
 
       setConfigList(listaAgendas);
 
-      // 🟢 MÁGICA DOS DIAS: Transforma "Seg, Ter" em datas clicáveis no calendário
       if (listaAgendas.length > 0) {
         const datasCalculadas: string[] = [];
         const diasSemanasAtivos = listaAgendas.map((item: any) => item.DIAS_ATIVOS?.trim());

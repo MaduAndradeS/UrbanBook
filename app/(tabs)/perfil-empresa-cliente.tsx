@@ -26,7 +26,6 @@ export default function PerfilEmpresaCliente() {
   const [modalFotoVisivel, setModalFotoVisivel] = useState(false);
   const [fotoSelecionada, setFotoSelecionada] = useState('');
 
-  // 🔹 DEFINIR ID (rota ou usuário logado)
   useEffect(() => {
     async function pegarId() {
       if (id) {
@@ -43,7 +42,6 @@ export default function PerfilEmpresaCliente() {
     pegarId();
   }, [id]);
 
-  // 🔹 CARREGAR DADOS
   useEffect(() => {
     if (!idBuscado) return;
 
@@ -110,7 +108,6 @@ export default function PerfilEmpresaCliente() {
         </View>
 
         <View style={styles.actionButtons}>
-          {/* 🟢 ROTA PARA A PÁGINA DA DUDINHA PASSANDO O ID */}
           <TouchableOpacity 
             style={styles.actionButtonFull} 
             onPress={() => router.push(`/Cliente_Datas?id=${idBuscado}`)}

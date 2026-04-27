@@ -111,7 +111,6 @@ exports.buscarPorCliente = async (req, res) => {
   }
 };
 
-// 🟢 FUNÇÕES NOVAS DE APROVAÇÃO
 exports.aprovarAgendamento = async (req, res) => {
   try {
     const { id } = req.params;

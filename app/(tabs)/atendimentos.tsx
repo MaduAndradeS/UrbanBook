@@ -105,7 +105,7 @@ export default function AtendimentosScreen() {
   return (
     <SafeAreaView style={s.safeArea}>
       
-      {/* 🟢 CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
+      {/* CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
       <View style={s.headerGlobalSimulado}>
          <View style={s.headerInner}>
             <Text style={s.urbanText}>Urban Book</Text>

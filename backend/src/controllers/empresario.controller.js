@@ -292,7 +292,6 @@ exports.buscarDisponibilidade = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    // 🔥 VALIDAÇÃO CRÍTICA
     if (!id || isNaN(id)) {
       return res.status(400).json({
         message: 'ID inválido'

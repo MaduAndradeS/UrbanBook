@@ -58,7 +58,6 @@ if (!id) {
 
 await AsyncStorage.setItem('id_usuario', String(id));
 
-    // 🔁 REDIRECIONA
     if (data.tipo === 'ADM') {
       router.replace('/painelAdm');
     } else if (data.tipo === 'CLIENTE') {

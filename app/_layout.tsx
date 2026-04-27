@@ -19,7 +19,6 @@ export default function RootLayout() {
 
   const telaAtual = segments[segments.length - 1];
 
-  // 🟢 1. ADICIONADO: Esconde a seta de voltar nestas telas todas
   const esconderVoltar =
     telaAtual === 'homepage' ||
     telaAtual === 'atendimentos' ||
@@ -27,7 +26,6 @@ export default function RootLayout() {
     telaAtual === 'perfil-usuario' ||
     telaAtual === 'pesquisa_cliente';
 
-  // 🟢 2. ADICIONADO: Desliga o cabeçalho global nas telas que têm o sininho
   const mostrarCabecalho = 
     telaAtual !== 'atendimentos' && 
     telaAtual !== 'agendamentos';

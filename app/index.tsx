@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 
 export default function App() {
@@ -20,38 +21,56 @@ export default function App() {
   const [senha, setSenha] = useState('');
 
   async function fazerLogin() {
-    if (!email || !senha) {
-      Alert.alert('Atenção', 'Preencha email e senha');
+  if (!email || !senha) {
+    Alert.alert('Atenção', 'Preencha email e senha');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, senha })
+    });
+
+    const data = await response.json();
+
+    console.log("LOGIN DATA:", data);
+
+    if (!response.ok) {
+      Alert.alert('Erro', data.message);
       return;
     }
 
-    try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha })
-      });
+let id = null;
 
-      const data = await response.json();
+if (data.tipo === 'EMPRESARIO') {
+  id = data.usuario?.ID_EMPRESARIO;
+} else if (data.tipo === 'CLIENTE') {
+  id = data.usuario?.ID_CLIENTE;
+}
 
-      if (!response.ok) {
-        Alert.alert('Erro', data.message);
-        return;
-      }
+if (!id) {
+  console.log("ERRO: ID não encontrado", data);
+  Alert.alert("Erro", "ID não encontrado no login");
+  return;
+}
 
-      // 🔥 AQUI ESTÁ A MÁGICA
-      if (data.tipo === 'ADM') {
-        router.replace('/painelAdm');
-      } else if (data.tipo === 'CLIENTE') {
-        router.replace('/homepage');
-      } else if (data.tipo === 'EMPRESARIO') {
-        router.replace('/homepage'); // pode mudar depois
-      }
+await AsyncStorage.setItem('id_usuario', String(id));
 
-    } catch (error) {
-      Alert.alert('Erro', 'Erro ao conectar com servidor');
+    // 🔁 REDIRECIONA
+    if (data.tipo === 'ADM') {
+      router.replace('/painelAdm');
+    } else if (data.tipo === 'CLIENTE') {
+      router.replace('/homepage');
+    } else if (data.tipo === 'EMPRESARIO') {
+      router.replace('/homepage');
     }
+
+  } catch (error) {
+    Alert.alert('Erro', 'Erro ao conectar com servidor');
   }
+}
 
   return (
     <>

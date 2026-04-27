@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import { API_URL } from '../../config/api';
 const ID_CLIENTE = 1;
 
 type Status = 'confirmado' | 'pendente';

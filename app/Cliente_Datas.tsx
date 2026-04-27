@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import { API_URL } from '../config/api';
 
 const MAPA_DIAS_SEMANA: { [key: string]: number } = {
   'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6

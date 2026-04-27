@@ -1,220 +1,203 @@
-import { useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// ─── MOCK DATA ────────────────────────────────────────────────
-const MOCK_EMPRESA = {
-  nome: 'Luiz Serviços Gerais',
-  telefone1: '(19) 96345 - 5167',
-  telefone2: '(19) 92738 - 5167',
-  endereco: 'Rua Moacir Cavallo, 510 · Centro, Campinas SP',
-  estrelas: 5,
-  descricao: 'Presto serviços gerais a domicílio.',
-  tags: ['Encanador', 'Eletricista', 'Marceneiro'],
-  logo: 'https://www.unisuam.edu.br/wp-content/uploads/2023/05/Design-sem-nome-2.png',
-  fotos: [
-    'https://www.minutoseguros.com.br/blog/wp-content/uploads/2022/07/instalacao-eletrica-em-predio-1.jpg',
-  ],
-  avaliacoes: [
-    {
-      id: '1',
-      usuario: 'João Victor Minelli',
-      foto: 'https://img.freepik.com/free-photo/smiling-young-male-professional-standing-with-arms-crossed-while-making-eye-contact-against-isolated-background_662251-838.jpg?semt=ais_hybrid&w=740&q=80',
-      texto: 'Luiz se mostrou excelente e com preços acessíveis.',
-      estrelas: 5,
-    },
-  ],
-};
+const API_URL = 'http://192.168.0.225:3333/api';
 
-function Stars({ count, size = 16 }: { count: number; size?: number }) {
+export default function PerfilEmpresaCliente() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams();
+  
+  const idBuscado = id ? Number(id) : 5; 
+
+  const [empresa, setEmpresa] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal de Foto (Mantido)
+  const [modalFotoVisivel, setModalFotoVisivel] = useState(false);
+  const [fotoSelecionada, setFotoSelecionada] = useState('');
+
+  useEffect(() => {
+    async function carregarDados() {
+      try {
+        // Agora só precisamos buscar o perfil, a agenda fica com a tela da Dudinha!
+        const resPerfil = await fetch(`${API_URL}/empresarios/${idBuscado}`);
+
+        if (resPerfil.ok) {
+          const data = await resPerfil.json();
+          setEmpresa(data);
+        }
+      } catch (error) {
+        console.log('Erro ao carregar dados do perfil:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    carregarDados();
+  }, [idBuscado]);
+
+  const abrirFoto = (url: string) => {
+    setFotoSelecionada(url);
+    setModalFotoVisivel(true);
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#67C5C0" />
+      </View>
+    );
+  }
+
+  if (!empresa) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Profissional não encontrado.</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Text key={i} style={{ fontSize: size, color: i <= count ? '#FFB800' : '#ddd' }}>
-          ★
-        </Text>
-      ))}
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <MaterialCommunityIcons name="chevron-left" size={30} color="#333" />
+          </TouchableOpacity>
+          
+          <Image 
+            source={{ uri: empresa.FOTO_PERFIL || 'https://via.placeholder.com/150' }} 
+            style={styles.logo} 
+          />
+          
+          <View style={{ width: 45 }} />
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.title}>{empresa.NOME}</Text>
+        </View>
+
+        <View style={styles.actionButtons}>
+          {/* 🟢 ROTA PARA A PÁGINA DA DUDINHA PASSANDO O ID */}
+          <TouchableOpacity 
+            style={styles.actionButtonFull} 
+            onPress={() => router.push(`/Cliente_Datas?id=${idBuscado}`)}
+          >
+            <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.actionButtonText}>Agendar Horário</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionTitle}>Sobre</Text>
+        <View style={styles.box}>
+          <Text style={styles.boxText}>{empresa.BIO || 'Sem descrição.'}</Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>Serviços</Text>
+        <View style={styles.tagsRow}>
+          {empresa.SERVICOS?.map((s: any, i: number) => (
+            <View key={i} style={styles.tag}><Text style={styles.tagText}>{s.NOME}</Text></View>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Portfólio</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {empresa.FOTO_TRABALHO?.map((f: any, i: number) => (
+            <TouchableOpacity key={i} onPress={() => abrirFoto(f.URL)}>
+              <Image source={{ uri: f.URL }} style={styles.foto} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </ScrollView>
+
+      {/* Modal de Foto Ampliada */}
+      <Modal visible={modalFotoVisivel} transparent={true} animationType="fade">
+        <View style={styles.modalFotoOverlay}>
+          <TouchableOpacity 
+            style={styles.fecharFotoBtn} 
+            onPress={() => setModalFotoVisivel(false)}
+          >
+            <MaterialCommunityIcons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          
+          {fotoSelecionada ? (
+            <Image 
+              source={{ uri: fotoSelecionada }} 
+              style={styles.fotoAmpliada} 
+              resizeMode="contain" 
+            />
+          ) : null}
+        </View>
+      </Modal>
+
     </View>
   );
 }
 
-export default function PerfilEmpresaScreen() {
-  const empresa = MOCK_EMPRESA;
-  const router = useRouter();
-
-  return (
-    <SafeAreaView style={s.safeArea}>
-      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-        
-        <View style={{ height: 20 }} />
-
-        <View style={s.mainInfo}>
-          <Image source={{ uri: empresa.logo }} style={s.logoImg} resizeMode="cover" />
-          <View style={s.mainInfoText}>
-            <Text style={s.empresaNome}>{empresa.nome}</Text>
-            <Text style={s.telefone}>
-              {empresa.telefone1}    {empresa.telefone2}
-            </Text>
-            <Text style={s.endereco}>{empresa.endereco}</Text>
-            <Stars count={empresa.estrelas} />
-          </View>
-        </View>
-
-        <Text style={s.label}>Descrição</Text>
-        <View style={s.box}>
-          <Text style={s.boxText}>{empresa.descricao}</Text>
-        </View>
-
-        <Text style={s.label}>Tags</Text>
-        <View style={s.tagsBox}>
-          <View style={s.tagsRow}>
-            {empresa.tags.map(tag => (
-              <View key={tag} style={s.tag}>
-                <Text style={s.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <Text style={s.label}>Fotos</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.fotosScroll}>
-          {empresa.fotos.map((uri, idx) => (
-            <Image key={idx} source={{ uri }} style={s.foto} resizeMode="cover" />
-          ))}
-        </ScrollView>
-
-        <Text style={s.label}>Avaliações</Text>
-        {empresa.avaliacoes.map(av => (
-          <View key={av.id} style={s.avaliacaoCard}>
-            <Image source={{ uri: av.foto }} style={s.avaliacaoAvatar} />
-            <View style={s.avaliacaoInfo}>
-              <Text style={s.avaliacaoNome}>{av.usuario}</Text>
-              <Text style={s.avaliacaoTexto}>{av.texto}</Text>
-              <Stars count={av.estrelas} size={14} />
-            </View>
-          </View>
-        ))}
-
-        <View style={s.btnContainer}>
-  <TouchableOpacity
-    style={s.agendarBtn}
-    onPress={() => 
-      router.push({
-        pathname: '/Cliente_Datas',
-        params: { 
-          id: '1', // Aqui você força o ID 1 que criamos no banco
-          nome: empresa.nome 
-        }
-      })
-    }
-  >
-    <Text style={s.agendarText}>Agendar serviço</Text>
-  </TouchableOpacity>
-</View>
-
-        {/* Espaço final para respiro da rolagem */}
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-const s = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  scroll: { flex: 1, paddingHorizontal: 20 },
-
-  mainInfo: {
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 15 }, 
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
+  backButton: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eee' },
+  
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#111', textAlign: 'center' },
+  
+  actionButtons: { marginBottom: 20 },
+  actionButtonFull: { 
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 20,
+    backgroundColor: '#67C5C0', 
+    padding: 16, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  logoImg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0f0f0',
-  },
-  mainInfoText: { flex: 1, gap: 3 },
-  empresaNome: { fontSize: 17, fontWeight: 'bold', color: '#111' },
-  telefone: { fontSize: 11, color: '#555' },
-  endereco: { fontSize: 11, color: '#555', marginBottom: 4 },
+  actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 6,
-    marginTop: 4,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
+  box: { padding: 15, borderRadius: 12, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee' },
+  boxText: { color: '#666', lineHeight: 22 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
+  tag: { backgroundColor: '#67C5C0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
+  tagText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  foto: { width: 200, height: 130, borderRadius: 12, marginRight: 10 },
 
-  box: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+  // Estilos da Foto Ampliada
+  modalFotoOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.9)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  boxText: { fontSize: 13, color: '#333' },
-
-  tagsBox: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+  fecharFotoBtn: { 
+    position: 'absolute', 
+    top: 50, 
+    right: 20, 
+    zIndex: 10, 
+    padding: 10 
   },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: {
-    backgroundColor: '#67C5C0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  tagText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  fotosScroll: { marginBottom: 16 },
-  foto: {
-    width: 260,
-    height: 180,
-    borderRadius: 12,
-    marginRight: 12,
-    backgroundColor: '#eee',
-  },
-
-  avaliacaoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 14,
-  },
-  avaliacaoAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#eee',
-  },
-  avaliacaoInfo: { flex: 1, gap: 2 },
-  avaliacaoNome: { fontSize: 14, fontWeight: '700', color: '#111' },
-  avaliacaoTexto: { fontSize: 12, color: '#555' },
-
-  btnContainer: {
-    marginTop: 10,
-    marginBottom: 10,
-    width: '100%',
-  },
-  agendarBtn: {
-    backgroundColor: '#67C5C0',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  agendarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  fotoAmpliada: { 
+    width: '100%', 
+    height: '80%' 
+  }
 });

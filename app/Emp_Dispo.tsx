@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   pickerBox: {
     width: '90%',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#000000',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center'

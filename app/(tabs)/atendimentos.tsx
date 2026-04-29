@@ -2,17 +2,17 @@ import Calendar from '@/components/calendar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal, Pressable,
   SafeAreaView,
   ScrollView, StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Image
+  View
 } from 'react-native';
 import logo from '../../assets/images/logo.png';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import { API_URL } from '../../config/api';
 const ID_EMPRESARIO = 5;
 
 type Status = 'confirmado' | 'pendente';
@@ -105,7 +105,7 @@ export default function AtendimentosScreen() {
   return (
     <SafeAreaView style={s.safeArea}>
       
-      {/* 🟢 CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
+      {/* CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
       <View style={s.headerGlobalSimulado}>
          <View style={s.headerInner}>
             <Text style={s.urbanText}>Urban Book</Text>

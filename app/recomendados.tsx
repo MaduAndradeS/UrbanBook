@@ -12,7 +12,6 @@ import {
   View
 } from 'react-native';
 
-// Verifique se o caminho do config/api está correto (../ ou ../../)
 import { API_URL } from '../config/api';
 
 interface Profissional {
@@ -37,7 +36,6 @@ export default function Recomendados() {
     try {
       setErro(false);
       setCarregando(true);
-      // Usando crases corretamente para Template Literals
       const response = await fetch(`${API_URL}/empresarios?categoria=${encodeURIComponent(categoria)}`);
       
       if (!response.ok) throw new Error('Erro na resposta do servidor');

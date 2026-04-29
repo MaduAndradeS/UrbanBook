@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import { API_URL } from '../../config/api';
 const ID_CLIENTE = 1;
 
 type Status = 'confirmado' | 'pendente';
@@ -63,7 +63,7 @@ export default function AgendamentosScreen() {
       if (res.ok) {
         const banco = await res.json();
         
-        // 🟢 BLINDAGEM DO .MAP(): Evita tela vermelha
+        //BLINDAGEM DO .MAP(): Evita tela vermelha
         const dadosSeguros = Array.isArray(banco) ? banco : [];
         
         const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {

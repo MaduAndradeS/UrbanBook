@@ -1,36 +1,52 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Modal,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../config/api';
 
 export default function PerfilEmpresaCliente() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  
-  const idBuscado = id ? Number(id) : 5; 
 
+  const [idBuscado, setIdBuscado] = useState<number | null>(null);
   const [empresa, setEmpresa] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Modal de Foto (Mantido)
+
   const [modalFotoVisivel, setModalFotoVisivel] = useState(false);
   const [fotoSelecionada, setFotoSelecionada] = useState('');
 
   useEffect(() => {
+    async function pegarId() {
+      if (id) {
+        setIdBuscado(Number(id));
+        return;
+      }
+
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (idSalvo) {
+        setIdBuscado(Number(idSalvo));
+      }
+    }
+
+    pegarId();
+  }, [id]);
+
+  useEffect(() => {
+    if (!idBuscado) return;
+
     async function carregarDados() {
       try {
-        // Agora só precisamos buscar o perfil, a agenda fica com a tela da Dudinha!
         const resPerfil = await fetch(`${API_URL}/empresarios/${idBuscado}`);
 
         if (resPerfil.ok) {
@@ -43,6 +59,7 @@ export default function PerfilEmpresaCliente() {
         setLoading(false);
       }
     }
+
     carregarDados();
   }, [idBuscado]);
 
@@ -91,7 +108,6 @@ export default function PerfilEmpresaCliente() {
         </View>
 
         <View style={styles.actionButtons}>
-          {/* 🟢 ROTA PARA A PÁGINA DA DUDINHA PASSANDO O ID */}
           <TouchableOpacity 
             style={styles.actionButtonFull} 
             onPress={() => router.push(`/Cliente_Datas?id=${idBuscado}`)}

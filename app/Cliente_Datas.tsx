@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 
-const API_URL = 'http://192.168.0.225:3333/api';
+import { API_URL } from '../config/api';
 
 const MAPA_DIAS_SEMANA: { [key: string]: number } = {
   'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6
@@ -71,7 +71,6 @@ export default function Cliente_Datas() {
 
       const dataAgenda = await response.json();
       
-      // 🟢 CORREÇÃO: Ensina a tela a ler o Objeto Solto do backend
       let listaAgendas: any[] = [];
       if (Array.isArray(dataAgenda)) {
         listaAgendas = dataAgenda;
@@ -83,7 +82,6 @@ export default function Cliente_Datas() {
 
       setConfigList(listaAgendas);
 
-      // 🟢 MÁGICA DOS DIAS: Transforma "Seg, Ter" em datas clicáveis no calendário
       if (listaAgendas.length > 0) {
         const datasCalculadas: string[] = [];
         const diasSemanasAtivos = listaAgendas.map((item: any) => item.DIAS_ATIVOS?.trim());

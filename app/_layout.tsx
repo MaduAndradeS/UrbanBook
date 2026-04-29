@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-reanimated';
@@ -8,80 +8,63 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import logo from '../assets/images/logo.png';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const segments = useSegments();
+  const pathname = usePathname(); // Muito mais seguro que useSegments() para evitar tela branca
 
-  const telaAtual = segments[segments.length - 1];
+  // Telas que NÃO devem ter o cabeçalho global de jeito nenhum
+  // O '/' garante que a tela de login nunca vai bugar com o cabeçalho
+  const esconderCabecalhoGlobal = 
+    pathname === '/' || 
+    pathname === '/index' || 
+    pathname === '/atendimentos' || 
+    pathname === '/agendamentos' ||
+    pathname === '/cad_cliente' ||
+    pathname === '/cad_emp';
 
-  const esconderVoltar =
-    telaAtual === 'homepage' ||
-    telaAtual === 'atendimentos' ||
-    telaAtual === 'agendamentos' ||
-    telaAtual === 'perfil-usuario' ||
-    telaAtual === 'pesquisa_cliente';
-
-  const mostrarCabecalho = 
-    telaAtual !== 'atendimentos' && 
-    telaAtual !== 'agendamentos';
+  // Telas que têm cabeçalho, mas não devem ter a seta de voltar
+  const esconderSeta =
+    pathname === '/homepage' ||
+    pathname === '/pesquisa_cliente' ||
+    pathname === '/perfil-usuario';
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      
       <Stack
         screenOptions={{
-          headerShown: mostrarCabecalho, // Destrói a parede invisível que bloqueava o sininho
-          header: ({ navigation, back }) => (
-            <View style={{ backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 20,
-                  marginTop: 0,
-                }}
-              >
+          headerShown: !esconderCabecalhoGlobal,
+          header: () => {
+            if (esconderCabecalhoGlobal) return null;
 
-                {!esconderVoltar ? (
-                  <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={{ marginRight: 10 }}
-                  >
-                    <Ionicons name="chevron-back" size={28} color="#000" />
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ width: 28, marginRight: 10 }} />
-                )}
+            return (
+              <View style={{ backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 }}>
 
-                {/* TEXTO (mais à esquerda) */}
-                <Text
-                  style={{
-                    fontSize: 30,
-                    fontWeight: 'bold',
-                    color: '#757575',
-                    flex: 1, // ocupa espaço disponível
-                  }}
-                >
-                  Urban Book
-                </Text>
+                  {!esconderSeta && router.canGoBack() ? (
+                    <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
+                      <Ionicons name="chevron-back" size={28} color="#000" />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ width: 28, marginRight: 10 }} />
+                  )}
 
-                {/* LOGO (direita fixa) */}
-                <Image source={logo} style={{ width: 65, height: 60 }} />
+                  <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#757575', flex: 1 }}>
+                    Urban Book
+                  </Text>
 
+                  <Image source={logo} style={{ width: 65, height: 60 }} />
+                </View>
               </View>
-            </View>
-          ),
+            );
+          },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: mostrarCabecalho }} />
+        {/* Declarar o index explicitamente ajuda o Expo Router a não se perder */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
-
       <StatusBar style="auto" />
     </ThemeProvider>
   );

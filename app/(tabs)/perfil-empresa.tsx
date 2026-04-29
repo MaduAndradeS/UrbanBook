@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker'; // Adicionado
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -31,7 +31,7 @@ export default function PerfilEmpresa() {
 
   // CONTROLE
   const [loadingInicial, setLoadingInicial] = useState(true);
-  const [loadingUpload, setLoadingUpload] = useState(false); // Novo estado para feedback de upload
+  const [loadingUpload, setLoadingUpload] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,7 +87,6 @@ export default function PerfilEmpresa() {
     return () => { isMounted = false; };
   }, []);
 
-  //  LOGICA DE UPLOAD (Integrada do Pedro com IDs dinâmicos)
   const handleEditPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -174,7 +173,6 @@ export default function PerfilEmpresa() {
     }
   };
 
-  //  EXCLUIR HORÁRIO 
   const handleExcluirHorario = async (idDisp: number) => {
     Alert.alert("Excluir", "Deseja apagar este horário?", [
       { text: "Cancelar" },
@@ -189,6 +187,21 @@ export default function PerfilEmpresa() {
           } catch (e) {
             console.log(e);
           }
+        }
+      }
+    ]);
+  };
+
+  // LOGICA DE LOGOUT
+  const handleLogout = () => {
+    Alert.alert("Sair da Conta", "Tem a certeza que deseja terminar sessão?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Sair",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.clear();
+          router.replace('/');
         }
       }
     ]);
@@ -298,6 +311,12 @@ export default function PerfilEmpresa() {
             ))}
           </View>
 
+          {/* BOTÃO DE LOGOUT */}
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <MaterialCommunityIcons name="logout" size={24} color="#fff" />
+            <Text style={styles.logoutBtnText}>Sair da Conta</Text>
+          </TouchableOpacity>
+
         </View>
       </ScrollView>
     </View>
@@ -332,5 +351,7 @@ const styles = StyleSheet.create({
   portfolioContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   portfolioImg: { width: 100, height: 100, borderRadius: 10, marginRight: 10, marginBottom: 10 },
   addBtnSmall: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5F5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
-  addBtnTextSmall: { color: '#008080', fontWeight: 'bold', fontSize: 14 }
+  addBtnTextSmall: { color: '#008080', fontWeight: 'bold', fontSize: 14 },
+  logoutBtn: { flexDirection: 'row', backgroundColor: '#ff4d4d', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 30, marginBottom: 20 },
+  logoutBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 10 }
 });

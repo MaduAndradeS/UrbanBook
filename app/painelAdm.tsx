@@ -1,17 +1,19 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+import { API_URL } from '../config/api';
+
+
 const ID_ADM_FIXO = 1;
 
 type Empresario = {
@@ -48,7 +50,7 @@ export default function PainelAdm() {
     try {
       setCarregando(true);
 
-      const response = await fetch(`${API_BASE_URL}/empresarios/pendentes`);
+      const response = await fetch(`${API_URL}/empresarios/pendentes`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -69,7 +71,7 @@ export default function PainelAdm() {
       setAprovandoId(idEmpresario);
 
       const response = await fetch(
-        `${API_BASE_URL}/empresarios/${idEmpresario}/aprovar`,
+        `${API_URL}/empresarios/${idEmpresario}/aprovar`,
         {
           method: 'PATCH',
           headers: {

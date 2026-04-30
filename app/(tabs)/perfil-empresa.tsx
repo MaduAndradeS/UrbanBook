@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -13,151 +13,110 @@ import {
   View,
 } from 'react-native';
 
-// Configurações de Conexão
-import { API_URL } from '../../config/api';
-const ID_EMPRESARIO_ATUAL = 5;
+const API_URL = 'http://172.20.10.2:3333/api';
 
 export default function PerfilEmpresa() {
   const router = useRouter(); 
+  const [idEmpresario, setIdEmpresario] = useState<number | null>(null);
 
   // ESTADOS DO PERFIL
   const [perfilImg, setPerfilImg] = useState('https://via.placeholder.com/150');
   const [nomeEmpresario, setNomeEmpresario] = useState('Carregando...');
-  const [bio, setBio] = useState('Buscando informações...');
+  const [bio, setBio] = useState('');
   const [telefone, setTelefone] = useState('Não informado');
   const [endereco, setEndereco] = useState('Endereço não cadastrado');
   const [servicos, setServicos] = useState<any[]>([]);
   const [fotosTrabalho, setFotosTrabalho] = useState<any[]>([]);
   const [agenda, setAgenda] = useState<any[]>([]);
 
-  // ESTADOS DE CONTROLE
-  const [loading, setLoading] = useState(false);
+  // CONTROLE
   const [loadingInicial, setLoadingInicial] = useState(true);
 
-  // 1. CARREGAMENTO DOS DADOS
-  const carregarDados = async () => {
+  // 🔹 PEGAR ID
+  useEffect(() => {
+    async function pegarId() {
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (idSalvo) {
+        setIdEmpresario(Number(idSalvo));
+      } else {
+        router.replace('/');
+      }
+    }
+    pegarId();
+  }, []);
+
+  // 🔹 CARREGAR DADOS
+  useEffect(() => {
+    if (idEmpresario) {
+      carregarTudo();
+    }
+  }, [idEmpresario]);
+
+  async function carregarTudo() {
     try {
-      const [resPerfil, resAgenda] = await Promise.all([
-        fetch(`${API_URL}/empresarios/${ID_EMPRESARIO_ATUAL}`),
-        fetch(`${API_URL}/empresarios/${ID_EMPRESARIO_ATUAL}/disponibilidade`)
+      const [resP, resA] = await Promise.all([
+        fetch(`${API_URL}/empresarios/${idEmpresario}`),
+        fetch(`${API_URL}/empresarios/${idEmpresario}/disponibilidade`)
       ]);
 
-      if (resPerfil.ok) {
-        const data = await resPerfil.json();
-        if (data.FOTO_PERFIL) setPerfilImg(data.FOTO_PERFIL);
-        if (data.NOME) setNomeEmpresario(data.NOME);
-        if (data.BIO) setBio(data.BIO);
-        if (data.TELEFONE?.length > 0) setTelefone(data.TELEFONE[0].TELEFONE);
-        if (data.ENDERECO?.length > 0) {
-          const end = data.ENDERECO[0];
-          setEndereco(`${end.RUA}, ${end.NUM} - ${end.BAIRRO}, ${end.CIDADE}`);
+      const dataP = await resP.json();
+
+      if (resP.ok) {
+        if (dataP.FOTO_PERFIL) setPerfilImg(dataP.FOTO_PERFIL);
+        setNomeEmpresario(dataP.NOME || 'Empresário');
+        setBio(dataP.BIO || 'Nenhuma descrição informada.');
+
+        if (dataP.TELEFONE?.length > 0)
+          setTelefone(dataP.TELEFONE[0].TELEFONE);
+
+        if (dataP.ENDERECO?.length > 0) {
+          const e = dataP.ENDERECO[0];
+          setEndereco(`${e.RUA}, ${e.NUM} - ${e.BAIRRO}`);
         }
-        if (data.SERVICOS) setServicos(data.SERVICOS);
-        if (data.FOTO_TRABALHO) setFotosTrabalho(data.FOTO_TRABALHO);
+
+        setServicos(dataP.SERVICOS || []);
+        setFotosTrabalho(dataP.FOTO_TRABALHO || []);
       }
 
-      if (resAgenda.ok) {
-        const dataAgenda = await resAgenda.json();
-        const lista = Array.isArray(dataAgenda) ? dataAgenda : (dataAgenda.disponibilidade || []);
-        setAgenda(lista);
+      if (resA.ok) {
+        const dataA = await resA.json();
+        setAgenda(Array.isArray(dataA) ? dataA : []);
       }
-    } catch (error) {
-      console.error('Erro na carga inicial:', error);
+
+    } catch (e) {
+      console.log("Erro:", e);
     } finally {
       setLoadingInicial(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  // 🔹 EXCLUIR HORÁRIO
+  const handleExcluirHorario = async (idDisp: number) => {
+    Alert.alert("Excluir", "Deseja apagar este horário?", [
+      { text: "Cancelar" },
+      {
+        text: "Sim",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              `${API_URL}/empresarios/disponibilidade/${idDisp}`,
+              { method: 'DELETE' }
+            );
 
-  // 2. ATUALIZAR FOTO DE PERFIL
-  const handleEditPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setLoading(true);
-      const localUri = result.assets[0].uri;
-      const filename = localUri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename || '');
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-      const formData = new FormData();
-      formData.append('id', String(ID_EMPRESARIO_ATUAL));
-      formData.append('foto', { uri: localUri, name: filename || 'upload.jpg', type: type } as any);
-
-      try {
-        const response = await fetch(`${API_URL}/empresarios/perfil/foto`, {
-          method: 'PATCH',
-          body: formData,
-        });
-
-        const data = await response.json();
-        if (response.ok && data.FOTO_PERFIL) {
-          setPerfilImg(data.FOTO_PERFIL);
-          Alert.alert('Sucesso', 'Sua foto de perfil foi atualizada!');
+            if (res.ok) {
+              setAgenda(prev => prev.filter(a => a.ID_DISP !== idDisp));
+            }
+          } catch (e) {
+            console.log(e);
+          }
         }
-      } catch (error) {
-        Alert.alert('Erro', 'Não foi possível enviar a foto.');
-      } finally {
-        setLoading(false);
       }
-    }
-  };
-
-  // 3. ADICIONAR FOTO AO PORTFÓLIO
-  const handleAddPortfolioPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setLoading(true);
-      const localUri = result.assets[0].uri;
-      const filename = localUri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename || '');
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-      const formData = new FormData();
-      formData.append('id_empresario', String(ID_EMPRESARIO_ATUAL));
-      formData.append('foto', { uri: localUri, name: filename || 'portfolio.jpg', type: type } as any);
-
-      try {
-        const response = await fetch(`${API_URL}/empresarios/trabalhos/fotos`, {
-          method: 'POST',
-          body: formData,
-        });
-        
-        const data = await response.json();
-        if (response.ok) {
-          const novaFoto = data.foto || data;
-          setFotosTrabalho(prev => [...prev, novaFoto]);
-          Alert.alert('Sucesso', 'Foto adicionada ao portfólio!');
-        }
-      } catch (error) { 
-        Alert.alert('Erro', 'O servidor não respondeu.');
-      } finally { 
-        setLoading(false); 
-      }
-    }
+    ]);
   };
 
   if (loadingInicial) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#67C5C0" />
       </View>
     );
@@ -165,134 +124,238 @@ export default function PerfilEmpresa() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView style={s.container}>
+      <ScrollView style={styles.container}>
         
-        {/* CABEÇALHO */}
-        <View style={s.header}>
-          <View style={s.logoContainer}>
-            <Image source={{ uri: perfilImg }} style={s.logoImg} />
-            {loading ? (
-              <View style={s.loadingOverlay}><ActivityIndicator color="white" /></View>
-            ) : (
-              <TouchableOpacity style={s.editBtn} onPress={handleEditPhoto}>
-                <MaterialCommunityIcons name="camera-plus" size={22} color="white" />
-              </TouchableOpacity>
-            )}
-          </View>
-          <Text style={s.empresaNome}>{nomeEmpresario}</Text>
-          <View style={s.phoneRow}>
-            <MaterialCommunityIcons name="phone" size={18} color="#fff" />
-            <Text style={s.phoneText}>{telefone}</Text>
-          </View>
-        </View>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image source={{ uri: perfilImg }} style={styles.logoImg} />
 
-        <View style={s.content}>
-          
-          <TouchableOpacity 
-            style={s.agendaBtn} 
-            onPress={() => router.push('/Emp_Dispo')}
-          >
-            <MaterialCommunityIcons name="calendar-clock" size={24} color="#fff" />
-            <Text style={s.agendaBtnText}>Disponibilizar Horários</Text>
-          </TouchableOpacity>
-
-          <View style={s.listaAgendaContainer}>
-            {agenda.length > 0 && (
-               <Text style={[s.sectionTitle, { marginBottom: 10 }]}>Seus Horários Atuais</Text>
-            )}
-            {agenda.map((item, index) => (
-              <View key={item.ID_DISP || index} style={s.agendaCard}>
-                <View style={s.diaBadge}>
-                  <Text style={s.diaBadgeText}>{item.DIAS_ATIVOS}</Text>
-                </View>
-                <Text style={s.horarioText}>{item.PERIODOS}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={s.divider} />
-
-          {/* LOCALIZAÇÃO (CORRIGIDA) */}
-          <Text style={s.sectionTitle}>Localização</Text>
-          <View style={s.infoRow}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#008080" />
-            <Text style={s.infoText}>{endereco}</Text>
-          </View>
-
-          <View style={s.divider} />
-
-          <Text style={s.sectionTitle}>Serviços Oferecidos</Text>
-          <View style={s.servicosContainer}>
-            {servicos.map((servico, index) => (
-              <View key={index} style={s.servicoTag}>
-                <MaterialCommunityIcons name="tools" size={16} color="#008080" style={{ marginRight: 5 }} />
-                <Text style={s.servicoTexto}>{servico.NOME}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={s.divider} />
-
-          <Text style={s.sectionTitle}>Sobre o seu negócio</Text>
-          <Text style={s.description}>{bio}</Text>
-
-          <View style={s.divider} />
-
-          <View style={s.portfolioHeader}>
-            <Text style={s.sectionTitle}>Fotos do Trabalho</Text>
-            <TouchableOpacity style={s.addPhotoBtn} onPress={handleAddPortfolioPhoto}>
-              <MaterialCommunityIcons name="plus" size={18} color="#008080" />
-              <Text style={s.addPhotoText}>Adicionar</Text>
+            <TouchableOpacity style={styles.editBtn}>
+              <MaterialCommunityIcons name="camera-plus" size={22} color="white" />
             </TouchableOpacity>
           </View>
 
-          <View style={s.portfolioContainer}>
-            {fotosTrabalho.map((foto, index) => (
-              <Image 
-                key={index} 
-                source={{ uri: foto.URL || foto.url }} 
-                style={s.portfolioImg} 
-                resizeMode="cover"
-              />
+          <Text style={styles.empresaNome}>{nomeEmpresario}</Text>
+
+          <View style={styles.phoneRow}>
+            <MaterialCommunityIcons name="phone" size={18} color="#fff" />
+            <Text style={styles.phoneText}>{telefone}</Text>
+          </View>
+        </View>
+
+        {/* CONTEÚDO */}
+        <View style={styles.content}>
+
+          <TouchableOpacity
+            style={styles.agendaBtn}
+            onPress={() => router.push('/Emp_Dispo')}
+          >
+            <MaterialCommunityIcons name="calendar-clock" size={24} color="#fff" />
+            <Text style={styles.agendaBtnText}>
+              Novo Horário de Atendimento
+            </Text>
+          </TouchableOpacity>
+
+          {/* AGENDA */}
+          <View style={styles.listaAgendaContainer}>
+            {agenda.map((item, i) => (
+              <View key={i} style={styles.agendaCard}>
+                <View style={styles.agendaInfo}>
+                  <View style={styles.diaBadge}>
+                    <Text style={styles.diaBadgeText}>{item.DIAS_ATIVOS}</Text>
+                  </View>
+                  <Text style={styles.horarioText}>{item.PERIODOS}</Text>
+                </View>
+
+                <TouchableOpacity onPress={() => handleExcluirHorario(item.ID_DISP)}>
+                  <MaterialCommunityIcons name="trash-can-outline" size={22} color="#ff4d4d" />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
 
-          <View style={{ height: 40 }} />
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Localização</Text>
+          <Text style={styles.infoText}>{endereco}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Serviços</Text>
+          <View style={styles.servicosContainer}>
+            {servicos.map((s, i) => (
+              <View key={i} style={styles.servicoTag}>
+                <Text style={styles.servicoTexto}>{s.NOME}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Sobre</Text>
+          <Text style={styles.description}>{bio}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Portfólio</Text>
+          <View style={styles.portfolioContainer}>
+            {fotosTrabalho.map((f, i) => (
+              <Image key={i} source={{ uri: f.URL }} style={styles.portfolioImg} />
+            ))}
+          </View>
+
         </View>
       </ScrollView>
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { alignItems: 'center', paddingVertical: 40, backgroundColor: '#67C5C0', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+
+  header: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#67C5C0',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30
+  },
+
   logoContainer: { position: 'relative' },
-  logoImg: { width: 140, height: 140, borderRadius: 70, borderWidth: 4, borderColor: '#fff', backgroundColor: '#e1e4e8' },
-  editBtn: { position: 'absolute', bottom: 5, right: 5, backgroundColor: '#FFB800', padding: 10, borderRadius: 25, borderWidth: 2, borderColor: '#fff' },
-  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 70, justifyContent: 'center', alignItems: 'center' },
-  empresaNome: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginTop: 15 },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5, opacity: 0.9 },
-  phoneText: { color: '#fff', fontSize: 16, marginLeft: 8, fontWeight: '500' },
+
+  logoImg: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 4,
+    borderColor: '#fff'
+  },
+
+  editBtn: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#FFB800',
+    padding: 10,
+    borderRadius: 25
+  },
+
+  empresaNome: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 15
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5
+  },
+
+  phoneText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 8
+  },
+
   content: { padding: 20 },
-  agendaBtn: { flexDirection: 'row', backgroundColor: '#FFB800', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 5, elevation: 3 },
-  agendaBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
-  listaAgendaContainer: { marginTop: 25 },
-  agendaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#eee' },
-  diaBadge: { backgroundColor: '#67C5C0', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, marginRight: 10 },
-  diaBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  horarioText: { color: '#444', fontSize: 14, fontWeight: '500' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
-  infoText: { fontSize: 15, color: '#666', marginLeft: 8, flex: 1 },
-  servicosContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  servicoTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5F5', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#B2DFDB' },
-  servicoTexto: { color: '#008080', fontWeight: 'bold', fontSize: 13 },
-  description: { fontSize: 15, color: '#666', lineHeight: 22 },
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 20 },
-  portfolioHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  addPhotoBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5F5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, borderWidth: 1, borderColor: '#B2DFDB' },
-  addPhotoText: { color: '#008080', fontWeight: 'bold', fontSize: 13, marginLeft: 4 },
-  portfolioContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  portfolioImg: { width: 100, height: 100, borderRadius: 8, marginBottom: 10, marginRight: 10, backgroundColor: '#eee' },
+
+  agendaBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#FFB800',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  agendaBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 10
+  },
+
+  listaAgendaContainer: { marginTop: 15 },
+
+  agendaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8
+  },
+
+  agendaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+
+  diaBadge: {
+    backgroundColor: '#67C5C0',
+    padding: 5,
+    borderRadius: 5,
+    marginRight: 10
+  },
+
+  diaBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold'
+  },
+
+  horarioText: { fontWeight: 'bold' },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 20
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10
+  },
+
+  infoText: { color: '#666' },
+
+  servicosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
+  },
+
+  servicoTag: {
+    backgroundColor: '#E8F5F5',
+    padding: 8,
+    borderRadius: 15,
+    marginRight: 8,
+    marginBottom: 8
+  },
+
+  servicoTexto: {
+    color: '#008080',
+    fontWeight: 'bold'
+  },
+
+  description: {
+    color: '#666',
+    lineHeight: 20
+  },
+
+  portfolioContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
+  },
+
+  portfolioImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 10,
+    marginBottom: 10
+  }
 });

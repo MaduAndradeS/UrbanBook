@@ -19,7 +19,7 @@ import logo from '../assets/images/logo.png';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+import { API_URL } from '../config/api';
 
 export default function CadCliente() {
   const router = useRouter();
@@ -122,7 +122,7 @@ export default function CadCliente() {
     try {
       setCarregando(true);
 
-      const response = await fetch(`${API_BASE_URL}/clientes`, {
+      const response = await fetch(`${API_URL}/clientes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
-const API_BASE_URL = 'http://192.168.0.101:3333/api';
+import { API_URL } from '../config/api';
 
 export default function App() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha })

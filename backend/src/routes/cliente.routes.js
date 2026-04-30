@@ -8,16 +8,16 @@ const upload = multer({ storage });
 const prisma = require('../lib/prisma');
 const clienteController = require('../controllers/cliente.controller');
 
-// 🔎 LISTAR + BUSCAR
+//  LISTAR + BUSCAR
 router.get('/', clienteController.listarClientes);
 
-// 🎯 BUSCAR POR ID
+//  BUSCAR POR ID
 router.get('/:id', clienteController.buscarClientePorId);
 
-// ➕ CRIAR CLIENTE (COM OU SEM FOTO)
+//  CRIAR CLIENTE (COM OU SEM FOTO)
 router.post('/', upload.single('foto'), clienteController.criarCliente);
 
-// 📸 ATUALIZAR FOTO DE PERFIL
+//  ATUALIZAR FOTO DE PERFIL
 router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.body;

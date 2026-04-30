@@ -1,10 +1,10 @@
 const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
 
-// listar empresários com busca, categoria e filtro de aprovados
+//  LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
 exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categoria = null) => {
   const termo = termoBusca?.trim() || undefined;
-  const cat = categoria && categoria !== 'Profissionais' ? categoria : undefined;
+  const cat = (categoria && categoria !== 'Profissionais') ? categoria : undefined;
 
   const where = {};
 
@@ -31,12 +31,12 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTO_TRABALHO: true
+      FOTO_TRABALHO: true // Mantido no singular conforme seu Schema
     }
   });
 };
 
-// listar empresários pendentes
+//  LISTAR EMPRESÁRIOS PENDENTES
 exports.listarEmpresariosPendentes = async () => {
   return await prisma.eMPRESARIO.findMany({
     where: { ID_ADM: null },
@@ -48,7 +48,7 @@ exports.listarEmpresariosPendentes = async () => {
   });
 };
 
-// buscar empresário por id
+//  BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (id) => {
   return await prisma.eMPRESARIO.findUnique({
     where: { ID_EMPRESARIO: id },
@@ -71,7 +71,7 @@ exports.criarEmpresario = async (data) => {
       BIO: data.bio || null,
       EMAIL: data.email,
       SENHA_HASH: data.senha,
-      FOTO_PERFIL: data.foto_perfil || null,
+      FOTO_PERFIL: data.foto_perfil,
       ID_ADM: null
     }
   });
@@ -121,7 +121,7 @@ exports.criarEmpresario = async (data) => {
   return await this.buscarEmpresarioPorId(novoEmpresario.ID_EMPRESARIO);
 };
 
-// aprovar empresário
+//  APROVAR EMPRESÁRIO (ADM) - Correção essencial do Pedro aplicada aqui
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({
     where: {
@@ -139,35 +139,33 @@ exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   });
 };
 
-// salvar disponibilidade
+// SALVAR DISPONIBILIDADE 
 exports.salvarDisponibilidade = async (dados) => {
   const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
 
   return await prisma.$transaction(async (tx) => {
     await tx.dISPONIBILIDADE.deleteMany({
-      where: {
-        ID_EMPRESARIO: Number(ID_EMPRESARIO)
-      }
+      where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
     });
 
     const novaDisp = await tx.dISPONIBILIDADE.create({
       data: {
         ID_EMPRESARIO: Number(ID_EMPRESARIO),
         DURACAO_MIN: Number(DURACAO),
-        PERIODOS: PERIODOS,
+        PERIODOS: PERIODOS,        
         DIAS_ATIVOS: DIAS_ATIVOS
       }
     });
 
-    if (BLOQUEIOS && BLOQUEIOS.trim() !== '') {
-      const listaBloqueios = BLOQUEIOS.split(',').map((b) => {
+    if (BLOQUEIOS && BLOQUEIOS.trim() !== "") {
+      const listaBloqueios = BLOQUEIOS.split(',').map(b => {
         const partes = b.split('T');
-        const hora = partes.length > 1 ? partes[1] : b;
-
+        const hora = partes.length > 1 ? partes[1] : b; 
+        
         return {
           ID_DISP: novaDisp.ID_DISP,
           HORA_INICIO: hora,
-          MOTIVO: 'Bloqueio Manual'
+          MOTIVO: "Bloqueio Manual"
         };
       });
 
@@ -180,7 +178,6 @@ exports.salvarDisponibilidade = async (dados) => {
   });
 };
 
-// adicionar foto de trabalho
 exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   return await prisma.fOTO_TRABALHO.create({
     data: {
@@ -190,16 +187,13 @@ exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   });
 };
 
-// buscar disponibilidade por empresário
 exports.buscarDisponibilidadePorId = async (id) => {
   try {
     return await prisma.dISPONIBILIDADE.findFirst({
-      where: {
-        ID_EMPRESARIO: Number(id)
-      }
+      where: { ID_EMPRESARIO: Number(id) }
     });
   } catch (error) {
-    console.error('Erro no Prisma ao buscar disponibilidade:', error);
+    console.error("Erro no Prisma ao buscar disponibilidade:", error);
     throw error;
   }
 };

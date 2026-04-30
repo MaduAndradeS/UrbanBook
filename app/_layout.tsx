@@ -19,26 +19,37 @@ export default function RootLayout() {
 
   const telaAtual = segments[segments.length - 1];
 
+  // 🟢 1. ADICIONADO: Esconde a seta de voltar nestas telas todas
   const esconderVoltar =
-    telaAtual === 'homepage'; /*se for adicionar mais coloca ||*/
-    
+    telaAtual === 'homepage' ||
+    telaAtual === 'atendimentos' ||
+    telaAtual === 'agendamentos' ||
+    telaAtual === 'perfil-usuario' ||
+    telaAtual === 'pesquisa_cliente';
+
+  // 🟢 2. ADICIONADO: Desliga o cabeçalho global nas telas que têm o sininho
+  const mostrarCabecalho = 
+    telaAtual !== 'atendimentos' && 
+    telaAtual !== 'agendamentos';
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       
       <Stack
-  screenOptions={{
-    header: ({ navigation, back }) => (
-      <View style={{ backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 20,
-            marginTop: 0,
-          }}
-        >
+        screenOptions={{
+          headerShown: mostrarCabecalho, // Destrói a parede invisível que bloqueava o sininho
+          header: ({ navigation, back }) => (
+            <View style={{ backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 20,
+                  marginTop: 0,
+                }}
+              >
 
-          {!esconderVoltar ? (
+                {!esconderVoltar ? (
                   <TouchableOpacity
                     onPress={() => router.back()}
                     style={{ marginRight: 10 }}
@@ -49,27 +60,27 @@ export default function RootLayout() {
                   <View style={{ width: 28, marginRight: 10 }} />
                 )}
 
-          {/* TEXTO (mais à esquerda) */}
-          <Text
-            style={{
-              fontSize: 30,
-              fontWeight: 'bold',
-              color: '#757575',
-              flex: 1, // ocupa espaço disponível
-            }}
-          >
-            Urban Book
-          </Text>
+                {/* TEXTO (mais à esquerda) */}
+                <Text
+                  style={{
+                    fontSize: 30,
+                    fontWeight: 'bold',
+                    color: '#757575',
+                    flex: 1, // ocupa espaço disponível
+                  }}
+                >
+                  Urban Book
+                </Text>
 
-          {/* LOGO (direita fixa) */}
-          <Image source={logo} style={{ width: 65, height: 60 }} />
+                {/* LOGO (direita fixa) */}
+                <Image source={logo} style={{ width: 65, height: 60 }} />
 
-        </View>
-      </View>
-    ),
-  }}
->
-        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
+              </View>
+            </View>
+          ),
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: mostrarCabecalho }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
 

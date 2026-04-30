@@ -9,9 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.225:3333/api';
-const ID_CLIENTE = 1;
+import { API_URL } from '../../config/api';
 
 type Status = 'confirmado' | 'pendente';
 
@@ -43,7 +43,7 @@ const STATUS = {
 };
 
 const INITIAL_YEAR  = 2026;
-const INITIAL_MONTH = 3; 
+const INITIAL_MONTH = 4;
 
 export default function AgendamentosScreen() {
   const [year, setYear]         = useState(INITIAL_YEAR);
@@ -59,28 +59,55 @@ export default function AgendamentosScreen() {
   async function buscarDoBanco() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/agendamentos/cliente/${ID_CLIENTE}`);
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (!idSalvo) {
+         setLoading(false);
+         return;
+      }
+
+      const res = await fetch(`${API_URL}/agendamentos/cliente/${idSalvo}`);
       if (res.ok) {
         const banco = await res.json();
-        
-        // 🟢 BLINDAGEM DO .MAP(): Evita tela vermelha
         const dadosSeguros = Array.isArray(banco) ? banco : [];
         
         const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {
-          const d = new Date(ag.dataInteira || ag.DATA_HORA || new Date());
-          return {
-            id: String(ag.id),
-            name: ag.empresa || 'Sem nome',
-            date: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth()+1).padStart(2, '0')}/${d.getUTCFullYear()}`,
-            time: ag.hora || '00:00',
-            status: (ag.status || '').toLowerCase() === 'confirmado' ? 'confirmado' : 'pendente',
-            day: d.getUTCDate(),
-            month: d.getUTCMonth(),
-            year: d.getUTCFullYear()
-          };
+          const idAgendamento = ag.ID_AGENDAMENTO || ag.ID_AGENDA || ag.id;
+          const id = String(idAgendamento || Math.random());
+          
+          // LÊ A CHECKBOX "CONFIRMACAO" DO SEU BANCO DE DADOS
+          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true || String(ag.STATUS || '').toLowerCase() === 'confirmado';
+          const status: Status = isConfirmado ? 'confirmado' : 'pendente';
+          
+          const name = ag.EMPRESARIO?.NOME || ag.empresa || 'Profissional';
+          
+          let day = 1, monthAg = 0, yearAg = 2026;
+          let dateFmt = '00/00/0000', timeFmt = ag.hora || ag.HORA || '00:00';
+          
+          const rawDate = ag.DATA_HORA || ag.DATA || ag.createdAt;
+          if (rawDate) {
+              if (typeof rawDate === 'string' && rawDate.includes('T')) {
+                  const dObj = new Date(rawDate);
+                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
+                  if (timeFmt === '00:00') {
+                      timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+                  }
+              } else if (typeof rawDate === 'string' && rawDate.includes('-')) {
+                  const [y, m, d] = rawDate.split('-').map(Number);
+                  day = d; monthAg = m - 1; yearAg = y;
+                  dateFmt = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+              } else if (typeof rawDate === 'string' && rawDate.includes('/')) {
+                  dateFmt = rawDate;
+                  const [d, m, y] = rawDate.split('/').map(Number);
+                  day = d; monthAg = m - 1; yearAg = y;
+              }
+          }
+
+          return { id, name, date: dateFmt, time: timeFmt, status, day, month: monthAg, year: yearAg };
         });
         
-        setMonthData(filterByMonth(convertidos, month, year));
+        const convertidosLimpos = convertidos.filter(item => item.date !== '00/00/0000');
+        setMonthData(filterByMonth(convertidosLimpos, month, year));
       } else {
         setMonthData([]);
       }
@@ -101,11 +128,7 @@ export default function AgendamentosScreen() {
 
   return (
     <SafeAreaView style={s.safeArea}>
-      
-      {/* Esconde a barra de navegação nativa do Expo */}
       <Stack.Screen options={{ headerShown: false }} />
-
-      {/* Cabeçalho fixo */}
       <View style={s.headerRow}>
         <Text style={s.pageTitle}>Meus Agendamentos</Text>
       </View>
@@ -114,12 +137,20 @@ export default function AgendamentosScreen() {
 
         <View style={s.calendarCard}>
           {loading ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} /> : (
-              <Calendar initialYear={INITIAL_YEAR} initialMonth={INITIAL_MONTH} selectedDay={selectedDay} onSelectDay={(day) => setDay(day)} onMonthChange={handleMonthChange} confirmedDays={confirmedDays(monthData)} pendingDays={pendingOnlyDays(monthData)} />
+              <Calendar 
+                 initialYear={INITIAL_YEAR} 
+                 initialMonth={INITIAL_MONTH} 
+                 selectedDay={selectedDay} 
+                 onSelectDay={(day) => setDay(day)} 
+                 onMonthChange={handleMonthChange} 
+                 confirmedDays={confirmedDays(monthData)} 
+                 pendingDays={pendingOnlyDays(monthData)} 
+              />
             )}
         </View>
 
         <Text style={s.sectionTitle}>
-          {dayAppointments.length > 0 ? `Agendamentos do dia ${selectedDay}` : `Nenhum agendamento no dia ${selectedDay}`}
+          {dayAppointments.length > 0 ? `Agendamentos do dia ${selectedDay}` : `Sem compromissos no dia ${selectedDay}`}
         </Text>
 
         {dayAppointments.map(item => {

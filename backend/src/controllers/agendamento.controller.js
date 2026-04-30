@@ -111,18 +111,22 @@ exports.buscarPorCliente = async (req, res) => {
   }
 };
 
-// 🟢 FUNÇÕES NOVAS DE APROVAÇÃO
 exports.aprovarAgendamento = async (req, res) => {
   try {
     const { id } = req.params;
     const atualizado = await prisma.aGENDAMENTO.update({
-      where: { ID_AGENDAMENTO: Number(id) },
-      data: { STATUS: 'Confirmado' }
+      where: {
+        ID_AGENDAMENTO: Number(id) // Garante que o ID é um número
+      },
+      data: {
+        CONFIRMACAO: true,  // MARCA A CHECKBOX DE CONFIRMADO
+        CANCELAMENTO: false // GARANTE QUE NÃO ESTÁ CANCELADO
+      }
     });
     return res.json(atualizado);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ erro: "Erro ao aprovar agendamento" });
+    console.error("Erro ao aprovar agendamento:", error);
+    return res.status(500).json({ erro: 'Erro ao aprovar agendamento' });
   }
 };
 

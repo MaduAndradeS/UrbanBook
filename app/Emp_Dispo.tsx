@@ -1,4 +1,5 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { API_URL } from '../config/api';
+import { useRouter } from 'expo-router';
 
 type Periodo = {
   inicio: Date;
@@ -19,6 +21,7 @@ type Periodo = {
 };
 
 export default function Disponibilidade() {
+  const router = useRouter();
   const [duracao, setDuracao] = useState<number>(30); 
 
   const [periodos, setPeriodos] = useState<Periodo[]>([
@@ -37,7 +40,6 @@ export default function Disponibilidade() {
   
   const [carregando, setCarregando] = useState<boolean>(false);
 
-  // Data de hoje para travar o calendário
   const hoje = new Date().toISOString().split('T')[0];
 
   function formatarHora(date: Date): string {
@@ -79,15 +81,41 @@ export default function Disponibilidade() {
   async function salvarAgenda() {
     setCarregando(true);
     try {
+      const idLogado = await AsyncStorage.getItem('id_usuario');
+      if(!idLogado) {
+         Alert.alert("Erro", "Sessão inválida. Faça login novamente.");
+         setCarregando(false);
+         return;
+      }
+
       const periodosString = periodos.map(p => `${formatarHora(p.inicio)}-${formatarHora(p.fim)}`).join(',');
-      const diasAtivosString = Object.keys(diasAtivos).filter(d => diasAtivos[d]).join(',');
+      
+      // LÓGICA DE DIAS DA SEMANA RESTAURADA
+      const mapaDias: any = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab' };
+      const diasSemanaUnicos = new Set<string>();
+      
+      Object.keys(diasAtivos).forEach(diaISO => {
+        if(diasAtivos[diaISO]){
+           const dataReal = new Date(`${diaISO}T12:00:00Z`);
+           diasSemanaUnicos.add(mapaDias[dataReal.getUTCDay()]);
+        }
+      });
+      
+      const diasAtivosString = Array.from(diasSemanaUnicos).join(',');
+
+      if (!diasAtivosString) {
+        Alert.alert("Atenção", "Selecione pelo menos um dia no calendário.");
+        setCarregando(false);
+        return;
+      }
+
       const bloqueiosString = Object.entries(bloqueados).flatMap(([dia, horas]) => horas.map(h => `${dia}T${h}`)).join(',');
 
       const response = await fetch(`${API_URL}/empresarios/disponibilidade`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ID_EMPRESARIO: 1, 
+          ID_EMPRESARIO: idLogado,
           DURACAO: duracao,
           PERIODOS: periodosString,
           DIAS_ATIVOS: diasAtivosString,
@@ -96,7 +124,9 @@ export default function Disponibilidade() {
       });
 
       if (response.ok) {
-        Alert.alert("Sucesso", "Configurações de agenda salvas!");
+        Alert.alert("Sucesso", "Configurações de agenda salvas!", [
+          { text: "OK", onPress: () => router.back() }
+        ]);
       } else {
         Alert.alert("Erro", "Erro ao salvar no servidor.");
       }
@@ -177,6 +207,8 @@ export default function Disponibilidade() {
         <Text style={{ marginTop: 15, color: '#007AFF', fontWeight: 'bold' }}>+ Adicionar Horário</Text>
       </TouchableOpacity>
 
+      <Text style={styles.subtitulo}>Selecione os dias da semana</Text>
+
       <Calendar
         minDate={hoje}
         theme={{
@@ -184,7 +216,7 @@ export default function Disponibilidade() {
           todayTextColor: '#007AFF',
           selectedDayBackgroundColor: '#000',
         }}
-        style={{ marginTop: 20, borderRadius: 10, elevation: 2 }}
+        style={{ marginTop: 10, borderRadius: 10, elevation: 2 }}
         onDayPress={(day: DateData) => {
           const dia = day.dateString;
           
@@ -218,7 +250,7 @@ export default function Disponibilidade() {
 
       {diaSelecionado && diasAtivos[diaSelecionado] && (
         <>
-          <Text style={styles.subtitulo}>Horários de {diaSelecionado} (Toque para bloquear)</Text>
+          <Text style={styles.subtitulo}>Bloquear horários em {diaSelecionado.split('-').reverse().join('/')}</Text>
           <View style={styles.lista}>
             {(horariosPorDia[diaSelecionado] || []).map((h: string) => {
               const bloqueado = bloqueados[diaSelecionado]?.includes(h);
@@ -292,103 +324,21 @@ export default function Disponibilidade() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#ffffff'
-  },
-  titulo: {
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
-  subtitulo: {
-    marginTop: 20,
-    fontWeight: 'bold'
-  },
-  contadorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    marginTop: 10,
-    padding: 5
-  },
-  btnContador: {
-    backgroundColor: '#000',
-    width: 45,
-    height: 45,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  txtContador: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold'
-  },
-  displayContador: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  txtDuracaoDisplay: {
-    fontSize: 18,
-    fontWeight: '600'
-  },
-  periodo: {
-    marginTop: 10
-  },
-  timeBtn: {
-    padding: 12,
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    marginTop: 8
-  },
-  lista: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 10
-  },
-  horario: {
-    padding: 10,
-    borderRadius: 10
-  },
-  btnSalvarGeral: {
-    marginTop: 40,
-    backgroundColor: '#000',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 30
-  },
-  pickerOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000
-  },
-  pickerBox: {
-    width: '90%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center'
-  },
-  pickerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#000'
-  },
-  doneButton: {
-    marginTop: 20,
-    backgroundColor: '#000',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center'
-  }
+  container: { flexGrow: 1, padding: 20, backgroundColor: '#ffffff' },
+  titulo: { fontSize: 20, fontWeight: 'bold' },
+  subtitulo: { marginTop: 20, fontWeight: 'bold' },
+  contadorContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f5f5f5', borderRadius: 12, marginTop: 10, padding: 5 },
+  btnContador: { backgroundColor: '#000', width: 45, height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  txtContador: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+  displayContador: { flex: 1, alignItems: 'center' },
+  txtDuracaoDisplay: { fontSize: 18, fontWeight: '600' },
+  periodo: { marginTop: 10 },
+  timeBtn: { padding: 12, backgroundColor: '#eee', borderRadius: 8, marginTop: 8 },
+  lista: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
+  horario: { padding: 10, borderRadius: 10 },
+  btnSalvarGeral: { marginTop: 40, backgroundColor: '#000', padding: 18, borderRadius: 12, alignItems: 'center', marginBottom: 30 },
+  pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  pickerBox: { width: '90%', backgroundColor: '#000000', borderRadius: 16, padding: 20, alignItems: 'center' },
+  pickerTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#000' },
+  doneButton: { marginTop: 20, backgroundColor: '#000', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' }
 });

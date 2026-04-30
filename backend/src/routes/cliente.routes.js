@@ -17,6 +17,8 @@ router.get('/:id', clienteController.buscarClientePorId);
 //  CRIAR CLIENTE (COM OU SEM FOTO)
 router.post('/', upload.single('foto'), clienteController.criarCliente);
 
+router.put('/:id', clienteController.atualizarCliente);
+
 //  ATUALIZAR FOTO DE PERFIL
 router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   try {

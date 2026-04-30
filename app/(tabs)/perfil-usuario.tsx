@@ -40,10 +40,10 @@ export default function PerfilUsuarioScreen() {
   const [editTelefone, setEditTelefone] = useState('');
 
   useEffect(() => {
-    carregarDadosCompletos();
+    carregarDados();
   }, []);
 
-  async function carregarDadosCompletos() {
+  async function carregarDados() {
     try {
       const idSalvo = await AsyncStorage.getItem('id_usuario');
       if (!idSalvo) {
@@ -51,28 +51,39 @@ export default function PerfilUsuarioScreen() {
         return;
       }
 
-      const [resCliente, resAgendamentos] = await Promise.all([
-        fetch(`${API_URL}/clientes/${idSalvo}`),
-        fetch(`${API_URL}/agendamentos/cliente/${idSalvo}`)
-      ]);
-
-      if (resCliente.ok) {
-        const dataCliente = await resCliente.json();
-        setNome(dataCliente.NOME || '');
-        setFotoPerfil(dataCliente.FOTO_PERFIL || null);
-        setEmail(dataCliente.EMAIL || '');
-        if (dataCliente.TELEFONE?.length > 0) setTelefone(dataCliente.TELEFONE[0].TELEFONE);
-        if (dataCliente.ENDERECO) setEnderecos(dataCliente.ENDERECO);
+      // 1. Tenta carregar os dados do Cliente primeiro
+      try {
+        const resCliente = await fetch(`${API_URL}/clientes/${idSalvo}`);
+        if (resCliente.ok) {
+          const dataCliente = await resCliente.json();
+          setNome(dataCliente.NOME || '');
+          setFotoPerfil(dataCliente.FOTO_PERFIL || null);
+          setEmail(dataCliente.EMAIL || '');
+          if (dataCliente.TELEFONE?.length > 0) setTelefone(dataCliente.TELEFONE[0].TELEFONE);
+          if (dataCliente.ENDERECO) setEnderecos(dataCliente.ENDERECO);
+        }
+      } catch (error) {
+        console.log('Erro ao buscar perfil:', error);
       }
 
-      if (resAgendamentos.ok) {
-        const dataAg = await resAgendamentos.json();
-        if (Array.isArray(dataAg) && dataAg.length > 0) setProximoAgendamento(dataAg[0]);
+      // 2. LIBERA A TELA PARA O UTILIZADOR (não fica mais travado)
+      setLoading(false);
+
+      // 3. Tenta carregar os agendamentos de forma silenciosa
+      try {
+        const resAgendamentos = await fetch(`${API_URL}/agendamentos/cliente/${idSalvo}`);
+        if (resAgendamentos.ok) {
+          const dataAg = await resAgendamentos.json();
+          if (Array.isArray(dataAg) && dataAg.length > 0) {
+            setProximoAgendamento(dataAg[0]);
+          }
+        }
+      } catch (error) {
+        console.log('Erro ao buscar agendamentos:', error);
       }
 
     } catch (error) {
-      console.log('Erro ao buscar dados:', error);
-    } finally {
+      console.log('Erro geral:', error);
       setLoading(false);
     }
   }
@@ -105,7 +116,7 @@ export default function PerfilUsuarioScreen() {
         const data = await response.json();
         if (response.ok) setFotoPerfil(data.FOTO_PERFIL);
       } catch (error) {
-        Alert.alert('Erro', 'Erro no servidor');
+        Alert.alert('Erro', 'Erro no servidor ao enviar foto.');
       } finally {
         setUploading(false);
       }
@@ -127,9 +138,11 @@ export default function PerfilUsuarioScreen() {
         setTelefone(editTelefone);
         Alert.alert('Sucesso', 'Dados atualizados!');
         setModalEditarVisible(false);
+      } else {
+        Alert.alert('Erro', 'Verifica se o backend está a correr e com a rota PUT criada.');
       }
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao salvar');
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
     } finally {
       setSalvandoDados(false);
     }
@@ -137,11 +150,12 @@ export default function PerfilUsuarioScreen() {
 
   const handleLogout = () => {
     Alert.alert('Sair', 'Deseja terminar sessão?', [
-      { text: 'Não' },
-      { text: 'Sair', onPress: async () => { await AsyncStorage.clear(); router.replace('/'); } },
+      { text: 'Não', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: async () => { await AsyncStorage.clear(); router.replace('/'); } },
     ]);
   };
 
+  // FUNDO BRANCO ADICIONADO PARA EVITAR TELA PRETA
   if (loading) return <View style={s.loadingCenter}><ActivityIndicator size="large" color="#67C5C0" /></View>;
 
   return (
@@ -159,7 +173,7 @@ export default function PerfilUsuarioScreen() {
               {uploading ? <ActivityIndicator color="#fff" size="small" /> : <MaterialCommunityIcons name="camera" size={20} color="#fff" />}
             </TouchableOpacity>
           </View>
-          <Text style={s.name}>{nome}</Text>
+          <Text style={s.name}>{nome || 'Carregando...'}</Text>
           <Text style={s.emailText}>{email}</Text>
         </View>
 
@@ -200,7 +214,7 @@ export default function PerfilUsuarioScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* MODAL EDITAR DADOS (SEM EMAIL) */}
+      {/* MODAL EDITAR DADOS */}
       <Modal visible={modalEditarVisible} animationType="slide" transparent>
         <View style={s.modalOverlay}>
           <View style={s.modalBox}>
@@ -212,7 +226,6 @@ export default function PerfilUsuarioScreen() {
             <Text style={s.inputLabel}>Telefone</Text>
             <TextInput style={s.input} value={editTelefone} onChangeText={setEditTelefone} keyboardType="phone-pad" />
 
-            {/* INFO: O e-mail não pode ser editado */}
             <View style={s.infoEmailBox}>
               <Text style={s.infoEmailText}>O e-mail ({email}) não pode ser alterado por segurança.</Text>
             </View>
@@ -257,7 +270,7 @@ export default function PerfilUsuarioScreen() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scroll: { flex: 1, paddingHorizontal: 20 },
-  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }, // FUNDO BRANCO AQUI
   headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: 4 },
   header: { fontSize: 26, fontWeight: 'bold', color: 'gray' },
   topIcon: { width: 50, height: 50, resizeMode: 'contain' },

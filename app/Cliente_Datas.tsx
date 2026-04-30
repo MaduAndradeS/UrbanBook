@@ -12,12 +12,12 @@ import {
   View
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { API_URL } from '../config/api';
 
-const MAPA_DIAS_SEMANA: { [key: string]: number } = {
-  'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6
-};
+const MAPA_DIAS: Record<number, string> = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab' };
+const MAPA_DIAS_REV: Record<string, number> = { 'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6 };
 
 export default function Cliente_Datas() {
   const params = useLocalSearchParams();
@@ -49,7 +49,8 @@ export default function Cliente_Datas() {
   }, [diaSelecionado]);
 
   async function fetchPerfil() {
-    const idReal = idEmpresario || 5;
+    const idReal = idEmpresario;
+    if (!idReal) return;
     try {
       const res = await fetch(`${API_URL}/empresarios/${idReal}`);
       if (res.ok) {
@@ -60,17 +61,20 @@ export default function Cliente_Datas() {
   }
 
   async function fetchConfig() {
-    const idReal = idEmpresario || 5; 
+    const idReal = idEmpresario; 
+    if (!idReal) {
+       setLoading(false);
+       return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/empresarios/${idReal}/disponibilidade`);
-      
       if (!response.ok) {
         setConfigList([]);
         return;
       }
 
       const dataAgenda = await response.json();
-      
       let listaAgendas: any[] = [];
       if (Array.isArray(dataAgenda)) {
         listaAgendas = dataAgenda;
@@ -83,22 +87,13 @@ export default function Cliente_Datas() {
       setConfigList(listaAgendas);
 
       if (listaAgendas.length > 0) {
-        const datasCalculadas: string[] = [];
-        const diasSemanasAtivos = listaAgendas.map((item: any) => item.DIAS_ATIVOS?.trim());
-        const numerosDiasAtivos = diasSemanasAtivos.map((diaExtenso: string) => MAPA_DIAS_SEMANA[diaExtenso]);
-
-        const hoje = new Date();
-        for (let i = 0; i < 60; i++) {
-          // Cria a data de forma segura ignorando o fuso horário (UTC bug)
-          const dataFutura = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i);
-          
-          if (numerosDiasAtivos.includes(dataFutura.getDay())) {
-            const ano = dataFutura.getFullYear();
-            const mes = String(dataFutura.getMonth() + 1).padStart(2, '0');
-            const dia = String(dataFutura.getDate()).padStart(2, '0');
-            datasCalculadas.push(`${ano}-${mes}-${dia}`);
-          }
-        }
+        let datasCalculadas: string[] = [];
+        listaAgendas.forEach((item: any) => {
+           if (item.DIAS_ATIVOS) {
+               const dates = item.DIAS_ATIVOS.split(',').map((d: string) => d.trim());
+               datasCalculadas.push(...dates);
+           }
+        });
         setDiasHabilitadosCalendario(datasCalculadas);
       }
     } catch (error) {
@@ -110,32 +105,61 @@ export default function Cliente_Datas() {
 
   async function buscarOcupados() {
     try {
-      const response = await fetch(`${API_URL}/agendamentos/check?id=${idEmpresario || 5}&data=${diaSelecionado}`);
+      const response = await fetch(`${API_URL}/agendamentos/check?id=${idEmpresario}&data=${diaSelecionado}`);
+      let listaOcupados: string[] = [];
       if (response.ok) {
         const data = await response.json();
-        setOcupados(data.horasOcupadas || []);
+        listaOcupados = data.horasOcupadas || [];
       }
+
+      if (configList.length > 0) {
+         configList.forEach(conf => {
+            if (conf.BLOQUEIO_DISPONIBILIDADE) {
+               conf.BLOQUEIO_DISPONIBILIDADE.forEach((b: any) => {
+                  if (b.HORA_INICIO && b.HORA_INICIO.startsWith(diaSelecionado!)) {
+                     const horaMinuto = b.HORA_INICIO.split('T')[1];
+                     listaOcupados.push(horaMinuto);
+                  }
+               });
+            }
+         });
+      }
+
+      setOcupados(listaOcupados);
     } catch (e) {
       setOcupados([]);
     }
   }
 
   async function confirmarAgendamento() {
-    const idParaAgendar = idEmpresario || "5";
-
     if (!diaSelecionado || !horaSelecionada) {
       Alert.alert("Erro", "Selecione dia e horário!");
       return;
     }
 
     try {
+      const idClienteLogado = await AsyncStorage.getItem('id_usuario');
+      if (!idClienteLogado) {
+         Alert.alert("Erro", "Você precisa estar logado para agendar.");
+         return;
+      }
+
+      const dataHoraFmt = `${diaSelecionado}T${horaSelecionada}:00-03:00`;
+
+      // ENVIA TUDO EM MAIÚSCULAS E MINÚSCULAS PARA O SERVIDOR NÃO TER DESCULPAS
       const response = await fetch(`${API_URL}/agendamentos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ID_CLIENTE: 1, 
-          ID_EMPRESARIO: Number(idParaAgendar),
-          DATA_HORA: `${diaSelecionado}T${horaSelecionada}:00`
+          ID_CLIENTE: Number(idClienteLogado), 
+          id_cliente: Number(idClienteLogado),
+          ID_EMPRESARIO: Number(idEmpresario),
+          id_empresario: Number(idEmpresario),
+          DATA_HORA: dataHoraFmt,
+          DATA: diaSelecionado,
+          data: diaSelecionado,
+          HORA: horaSelecionada,
+          hora: horaSelecionada
         })
       });
 
@@ -154,11 +178,13 @@ export default function Cliente_Datas() {
   function gerarGradeHorarios() {
     if (!diaSelecionado || configList.length === 0) return;
 
-    const dataObj = new Date(`${diaSelecionado}T12:00:00Z`); 
-    const diaSemanaNumero = dataObj.getUTCDay(); 
-    const nomeDiaSemana = Object.keys(MAPA_DIAS_SEMANA).find(key => MAPA_DIAS_SEMANA[key] === diaSemanaNumero);
-
-    const configDoDia = configList.find((item) => item.DIAS_ATIVOS?.trim() === nomeDiaSemana);
+    const configDoDia = configList.find((item) => {
+        if (!item.DIAS_ATIVOS) return false;
+        const dates = item.DIAS_ATIVOS.split(',').map((d: string) => d.trim());
+        const dateObj = new Date(`${diaSelecionado}T12:00:00Z`);
+        const diaDaSemana = MAPA_DIAS[dateObj.getUTCDay()];
+        return dates.includes(diaSelecionado!) || dates.includes(diaDaSemana);
+    });
 
     if (!configDoDia || !configDoDia.PERIODOS) {
       setHorariosDisponiveis([]);
@@ -167,7 +193,6 @@ export default function Cliente_Datas() {
 
     const lista: string[] = [];
     const duracao = configDoDia.DURACAO_MIN || 30;
-    
     const periodosLimpos = configDoDia.PERIODOS.replace(' às ', '-').split(',');
 
     periodosLimpos.forEach((p: string) => {
@@ -201,16 +226,26 @@ export default function Cliente_Datas() {
   };
 
   const marked: any = {};
-  diasHabilitadosCalendario.forEach((dataReal: string) => {
-    marked[dataReal] = { marked: true, dotColor: '#67C5C0' };
+  const hoje = new Date();
+
+  diasHabilitadosCalendario.forEach((dataOuDia: string) => {
+    if (dataOuDia.includes('-')) {
+       marked[dataOuDia] = { marked: true, dotColor: '#67C5C0' };
+    } else if (MAPA_DIAS_REV[dataOuDia] !== undefined) {
+       const diaAlvo = MAPA_DIAS_REV[dataOuDia];
+       for(let i=0; i<60; i++) {
+          const tempDate = new Date(hoje);
+          tempDate.setDate(hoje.getDate() + i);
+          if (tempDate.getDay() === diaAlvo) {
+             const isoStr = tempDate.toISOString().split('T')[0];
+             marked[isoStr] = { marked: true, dotColor: '#67C5C0' };
+          }
+       }
+    }
   });
 
   if (diaSelecionado) {
-    marked[diaSelecionado] = {
-      ...marked[diaSelecionado],
-      selected: true,
-      selectedColor: '#000'
-    };
+    marked[diaSelecionado] = { ...marked[diaSelecionado], selected: true, selectedColor: '#000' };
   }
 
   if (loading) {
@@ -239,19 +274,17 @@ export default function Cliente_Datas() {
         markedDates={marked}
         onDayPress={(day: any) => {
           const dataClicada = day.dateString;
+          const dateObj = new Date(`${dataClicada}T12:00:00Z`);
+          const diaDaSemana = MAPA_DIAS[dateObj.getUTCDay()];
 
-          if (diasHabilitadosCalendario.includes(dataClicada)) {
+          if (diasHabilitadosCalendario.includes(dataClicada) || diasHabilitadosCalendario.includes(diaDaSemana)) {
             setDiaSelecionado(dataClicada);
             setHoraSelecionada(null);
           } else {
             Alert.alert("Indisponível", "Este profissional não atende nesta data.");
           }
         }}
-        theme={{
-          todayTextColor: '#67C5C0',
-          selectedDayBackgroundColor: '#000',
-          arrowColor: '#67C5C0',
-        }}
+        theme={{ todayTextColor: '#67C5C0', selectedDayBackgroundColor: '#000', arrowColor: '#67C5C0' }}
       />
 
       {diaSelecionado && (
@@ -275,9 +308,7 @@ export default function Cliente_Datas() {
                       { backgroundColor: isOcupado ? '#F0F0F0' : (horaSelecionada === hora ? '#000' : '#67C5C0') }
                     ]}
                   >
-                    <Text style={{ color: isOcupado ? '#CCC' : '#FFF', fontWeight: 'bold' }}>
-                      {hora}
-                    </Text>
+                    <Text style={{ color: isOcupado ? '#CCC' : '#FFF', fontWeight: 'bold' }}>{hora}</Text>
                   </TouchableOpacity>
                 );
               })
@@ -288,7 +319,6 @@ export default function Cliente_Datas() {
         </>
       )}
 
-      {/* Modal Confirmar */}
       <Modal transparent visible={modalVisible} animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modalBox}>
@@ -307,7 +337,6 @@ export default function Cliente_Datas() {
         </View>
       </Modal>
 
-      {/* Modal Sucesso */}
       <Modal transparent visible={sucesso} animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modalBox}>

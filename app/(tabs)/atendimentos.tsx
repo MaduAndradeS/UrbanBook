@@ -2,6 +2,7 @@ import Calendar from '@/components/calendar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal, Pressable,
   SafeAreaView,
@@ -11,9 +12,9 @@ import {
   View
 } from 'react-native';
 import logo from '../../assets/images/logo.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { API_URL } from '../../config/api';
-const ID_EMPRESARIO = 5;
 
 type Status = 'confirmado' | 'pendente';
 
@@ -41,7 +42,7 @@ function pendingOnlyDays(data: Appointment[]) {
 }
 
 const INITIAL_YEAR  = 2026;
-const INITIAL_MONTH = 3; 
+const INITIAL_MONTH = 4;
 
 export default function AtendimentosScreen() {
   const [year, setYear]             = useState(INITIAL_YEAR);
@@ -61,26 +62,57 @@ export default function AtendimentosScreen() {
   async function buscarDoBanco() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/agendamentos/empresario/${ID_EMPRESARIO}`);
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (!idSalvo) {
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/agendamentos/empresario/${idSalvo}`);
       if (res.ok) {
         const banco = await res.json();
         const dadosSeguros = Array.isArray(banco) ? banco : [];
+        
         const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {
-          const d = new Date(ag.dataInteira || ag.DATA_HORA || new Date());
-          return {
-            id: String(ag.id),
-            name: ag.cliente || 'Sem nome',
-            date: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth()+1).padStart(2, '0')}/${d.getUTCFullYear()}`,
-            time: ag.hora || '00:00',
-            service: ag.servico || 'Serviço',
-            status: (ag.status || '').toLowerCase() === 'confirmado' ? 'confirmado' : 'pendente',
-            day: d.getUTCDate(),
-            month: d.getUTCMonth(),
-            year: d.getUTCFullYear()
-          };
+          const idAgendamento = ag.ID_AGENDAMENTO || ag.ID_AGENDA || ag.id;
+          const id = String(idAgendamento || Math.random());
+          
+          // LÊ A CHECKBOX "CONFIRMACAO" DO SEU BANCO DE DADOS
+          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true || String(ag.STATUS || '').toLowerCase() === 'confirmado';
+          const status: Status = isConfirmado ? 'confirmado' : 'pendente';
+          
+          const name = ag.CLIENTE?.NOME || ag.cliente || 'Cliente';
+          const service = ag.SERVICO?.NOME || ag.servico || 'Serviço';
+          
+          let day = 1, monthAg = 0, yearAg = 2026;
+          let dateFmt = '00/00/0000', timeFmt = ag.hora || ag.HORA || '00:00';
+          
+          const rawDate = ag.DATA_HORA || ag.DATA || ag.createdAt;
+          if (rawDate) {
+              if (typeof rawDate === 'string' && rawDate.includes('T')) {
+                  const dObj = new Date(rawDate);
+                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
+                  if (timeFmt === '00:00') {
+                      timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+                  }
+              } else if (typeof rawDate === 'string' && rawDate.includes('-')) {
+                  const [y, m, d] = rawDate.split('-').map(Number);
+                  day = d; monthAg = m - 1; yearAg = y;
+                  dateFmt = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+              } else if (typeof rawDate === 'string' && rawDate.includes('/')) {
+                  dateFmt = rawDate;
+                  const [d, m, y] = rawDate.split('/').map(Number);
+                  day = d; monthAg = m - 1; yearAg = y;
+              }
+          }
+
+          return { id, name, date: dateFmt, time: timeFmt, service, status, day, month: monthAg, year: yearAg };
         });
-        setMonthData(filterByMonth(convertidos, month, year));
-        setNotificacoes(convertidos.filter(a => a.status === 'pendente'));
+
+        const convertidosLimpos = convertidos.filter(item => item.date !== '00/00/0000');
+        setMonthData(filterByMonth(convertidosLimpos, month, year));
+        setNotificacoes(convertidosLimpos.filter(a => a.status === 'pendente'));
       }
     } catch (error) {
       console.log(error);
@@ -90,35 +122,40 @@ export default function AtendimentosScreen() {
   }
 
   const responderAgendamento = async (id: string, acao: 'aprovar' | 'rejeitar') => {
+    if (!id || id.includes('0.')) {
+        Alert.alert("Erro", "O ID deste agendamento não foi encontrado no banco de dados.");
+        return;
+    }
+
     try {
       const metodo = acao === 'aprovar' ? 'PUT' : 'DELETE';
-      const res = await fetch(`${API_URL}/agendamentos/${id}/${acao}`, { method: metodo });
+      const res = await fetch(`${API_URL}/agendamentos/${id}/${acao}`, { 
+          method: metodo,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ CONFIRMACAO: true }) // Manda a checkbox marcada!
+      });
+
       if (res.ok) {
+        Alert.alert("Sucesso", `Agendamento ${acao === 'aprovar' ? 'confirmado' : 'recusado'}!`);
         setNotifVisible(false);
         buscarDoBanco();
+      } else {
+        Alert.alert("Erro", "O servidor recusou a operação. Verifique o terminal do backend.");
       }
     } catch (e) {
-      console.log(e);
+      Alert.alert("Erro", "Falha de conexão com a internet.");
     }
   };
 
   return (
     <SafeAreaView style={s.safeArea}>
-      
-      {/* CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
       <View style={s.headerGlobalSimulado}>
          <View style={s.headerInner}>
             <Text style={s.urbanText}>Urban Book</Text>
             <View style={s.headerIcons}>
-               <TouchableOpacity 
-                 style={s.notifBtn} 
-                 onPress={() => setNotifVisible(true)}
-                 activeOpacity={0.5}
-               >
+               <TouchableOpacity style={s.notifBtn} onPress={() => setNotifVisible(true)}>
                  <Text style={{ fontSize: 24 }}>🔔</Text>
-                 {naoLidas > 0 && (
-                   <View style={s.badge}><Text style={s.badgeText}>{naoLidas}</Text></View>
-                 )}
+                 {naoLidas > 0 && <View style={s.badge}><Text style={s.badgeText}>{naoLidas}</Text></View>}
                </TouchableOpacity>
                <Image source={logo} style={s.logoImage} />
             </View>
@@ -131,11 +168,11 @@ export default function AtendimentosScreen() {
             <Text style={s.notifTitle}>Solicitações Pendentes</Text>
             {notificacoes.map(n => (
               <View key={n.id} style={s.notifItem}>
-                <Text style={s.notifItemTitulo}>Solicitação de {n.name}</Text>
+                <Text style={s.notifItemTitulo}>{n.name}</Text>
                 <Text style={s.notifItemMsg}>{n.date} às {n.time}</Text>
                 <View style={s.actionsRow}>
                   <TouchableOpacity style={s.btnAprovar} onPress={() => responderAgendamento(n.id, 'aprovar')}>
-                    <Text style={s.btnTextNotif}>✓ Aprovar</Text>
+                    <Text style={s.btnTextNotif}>✓ Aceitar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.btnRecusar} onPress={() => responderAgendamento(n.id, 'rejeitar')}>
                     <Text style={s.btnTextNotif}>✕ Recusar</Text>
@@ -150,23 +187,17 @@ export default function AtendimentosScreen() {
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.sectionTitleMain}>Meus Atendimentos</Text>
-        
         <View style={s.calendarCard}>
           {loading ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} /> : (
             <Calendar 
-              initialYear={INITIAL_YEAR} 
-              initialMonth={INITIAL_MONTH} 
-              selectedDay={selectedDay} 
-              onSelectDay={(day) => setDay(day)} 
-              onMonthChange={(m, y) => { setMonth(m); setYear(y); setDay(1); }} 
-              confirmedDays={confirmedDays(monthData)} 
-              pendingDays={pendingOnlyDays(monthData)} 
+              initialYear={INITIAL_YEAR} initialMonth={INITIAL_MONTH} selectedDay={selectedDay} 
+              onSelectDay={(day) => setDay(day)} onMonthChange={(m, y) => { setMonth(m); setYear(y); setDay(1); }} 
+              confirmedDays={confirmedDays(monthData)} pendingDays={pendingOnlyDays(monthData)} 
             />
           )}
         </View>
 
         <Text style={s.sectionTitle}>Atendimentos do dia {selectedDay}</Text>
-
         {monthData.filter(a => a.day === selectedDay).map(item => (
           <View key={item.id} style={s.card}>
             <View style={s.avatarCircle}><Text style={s.avatarInitial}>{item.name.charAt(0)}</Text></View>
@@ -187,7 +218,6 @@ export default function AtendimentosScreen() {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  // PaddingTop ajustado para o cabeçalho novo não encostar no topo da tela do celular
   headerGlobalSimulado: { backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 },
   headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
   urbanText: { fontSize: 30, fontWeight: 'bold', color: '#757575' },
@@ -196,7 +226,6 @@ const s = StyleSheet.create({
   notifBtn: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 2, right: 2, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-
   scroll: { flex: 1, paddingHorizontal: 20 },
   sectionTitleMain: { fontSize: 26, fontWeight: 'bold', color: '#111', marginTop: 10, marginBottom: 15 },
   calendarCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },

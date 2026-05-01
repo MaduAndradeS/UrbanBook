@@ -67,9 +67,6 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen name="atendimentos" options={{ href: null }} />
-
-      <Tabs.Screen name="perfil-empresa-cliente" options={{ href: null }} />
     </Tabs>
   );
 }

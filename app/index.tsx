@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -11,7 +12,6 @@ import {
   View
 } from 'react-native';
 import logo from '../assets/images/logo.png';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 
 export default function App() {
@@ -159,7 +159,7 @@ export default function App() {
 
           <TouchableOpacity
             style={styles.googleButton}
-            onPress={() => router.replace('/(tabs)/homepage')}
+            onPress={() => router.replace('/EsperaAprov')}
             disabled={logando}
           >
             <Text>Continuar com Google</Text>

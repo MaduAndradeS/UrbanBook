@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type EmpresarioApi = {
   ID_EMPRESARIO: number;
@@ -32,6 +32,11 @@ type EmpresarioApi = {
   SERVICOS?: Array<{
     NOME: string;
   }>;
+  FOTO_TRABALHO?: Array<{
+    ID_FOTO: number;
+    URL: string;
+    ID_EMPRESARIO: number;
+  }>;
 };
 
 type CardItem = {
@@ -40,6 +45,7 @@ type CardItem = {
   categorias: string[];
   endereco: string;
   imgPerfil: string | null;
+  imgTrabalho: string | null;
   distanciaKm?: number;
 };
 
@@ -186,6 +192,10 @@ export default function HomeCliente() {
         categorias: (item.SERVICOS || []).map((s) => s.NOME),
         endereco,
         imgPerfil: item.FOTO_PERFIL || null,
+        imgTrabalho:
+          item.FOTO_TRABALHO && item.FOTO_TRABALHO.length > 0
+            ? item.FOTO_TRABALHO[0].URL
+            : null,
         distanciaKm: item.DISTANCIA_KM
       };
     });
@@ -206,7 +216,7 @@ export default function HomeCliente() {
       setErro('');
 
       const response = await fetch(
-        `${API_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=10`
+        `${API_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=25`
       );
 
       const json: EmpresarioApi[] = await response.json();
@@ -391,6 +401,13 @@ export default function HomeCliente() {
                   )}
                 </View>
               </View>
+
+              {item.imgTrabalho && (
+                <Image
+                  source={{ uri: item.imgTrabalho }}
+                  style={styles.imgTrabalhoLateral}
+                />
+              )}
             </View>
 
             <Text style={styles.endereco}>{item.endereco}</Text>
@@ -595,7 +612,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap'
   },
   tag: {
-    backgroundColor: '#59D6F2',
+    backgroundColor: '#67C5C0',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -726,6 +743,13 @@ const styles = StyleSheet.create({
     color: '#777',
     marginTop: 4
   },
+  imgTrabalhoLateral: {
+  width: 95,
+  height: 95,
+  borderRadius: 14,
+  marginLeft: 10,
+  resizeMode: 'cover'
+},
   semResultadoTexto: {
     textAlign: 'center',
     color: '#777',

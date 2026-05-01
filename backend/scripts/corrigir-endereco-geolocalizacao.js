@@ -1,6 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
+const readline = require('readline');
 
 const prisma = new PrismaClient();
+
+function perguntar(pergunta) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) =>
+    rl.question(pergunta, (resposta) => {
+      rl.close();
+      resolve(resposta);
+    })
+  );
+}
 
 function limparCep(cep) {
   return String(cep || '').replace(/\D/g, '');
@@ -66,19 +81,16 @@ async function buscarLatitudeLongitude(endereco) {
   return null;
 }
 
-function esperar(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function executar() {
-  console.log('Iniciando correção de endereços...');
+  console.log('Iniciando correção de endereços de empresários...');
 
   const enderecos = await prisma.eNDERECO.findMany({
     where: {
-      OR: [
-        { LATITUDE: null },
-        { LONGITUDE: null }
-      ]
+      ID_EMPRESARIO: { not: null },
+      OR: [{ LATITUDE: null }, { LONGITUDE: null }]
+    },
+    include: {
+      EMPRESARIO: true
     }
   });
 
@@ -87,14 +99,29 @@ async function executar() {
   for (const enderecoBanco of enderecos) {
     try {
       console.log('----------------------------');
-      console.log(`Corrigindo ID_ENDERECO: ${enderecoBanco.ID_ENDERECO}`);
+      console.log(`Empresário: ${enderecoBanco.EMPRESARIO?.NOME}`);
       console.log(`CEP atual: ${enderecoBanco.CEP}`);
 
-      const enderecoCep = await buscarEnderecoPorCep(enderecoBanco.CEP);
+      let enderecoCep = await buscarEnderecoPorCep(enderecoBanco.CEP);
 
       if (!enderecoCep) {
-        console.log('CEP inválido ou não encontrado. Pulando...');
-        continue;
+        console.log('CEP inválido ou não encontrado.');
+
+        const novoCep = await perguntar(
+          'Digite um novo CEP (ou ENTER para pular): '
+        );
+
+        if (!novoCep) {
+          console.log('Pulando...');
+          continue;
+        }
+
+        enderecoCep = await buscarEnderecoPorCep(novoCep);
+
+        if (!enderecoCep) {
+          console.log('CEP digitado também inválido. Pulando...');
+          continue;
+        }
       }
 
       console.log('Endereço pelo CEP:', enderecoCep);
@@ -105,9 +132,7 @@ async function executar() {
         console.log('Não encontrou latitude/longitude. Atualizando apenas endereço...');
 
         await prisma.eNDERECO.update({
-          where: {
-            ID_ENDERECO: enderecoBanco.ID_ENDERECO
-          },
+          where: { ID_ENDERECO: enderecoBanco.ID_ENDERECO },
           data: {
             RUA: enderecoCep.rua,
             BAIRRO: enderecoCep.bairro,
@@ -121,9 +146,7 @@ async function executar() {
       }
 
       await prisma.eNDERECO.update({
-        where: {
-          ID_ENDERECO: enderecoBanco.ID_ENDERECO
-        },
+        where: { ID_ENDERECO: enderecoBanco.ID_ENDERECO },
         data: {
           RUA: enderecoCep.rua,
           BAIRRO: enderecoCep.bairro,
@@ -137,10 +160,8 @@ async function executar() {
 
       console.log('Atualizado com sucesso!');
       console.log(coordenadas);
-
-      await esperar(1200);
     } catch (error) {
-      console.log('Erro ao corrigir endereço:', error.message);
+      console.log('Erro:', error.message);
     }
   }
 

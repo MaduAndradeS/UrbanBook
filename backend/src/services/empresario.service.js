@@ -138,47 +138,51 @@ exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   });
 };
 
-// SALVAR DISPONIBILIDADE (CORRIGIDO PARA ATUALIZAR EM VEZ DE APAGAR TUDO)
+// SALVAR DISPONIBILIDADE (Refinado)
 exports.salvarDisponibilidade = async (dados) => {
-  const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
+  // Garantimos que os valores numéricos sejam de fato Numbers
+  const { ID_EMPRESARIO, DURACAO_MIN, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
+  const idEmp = Number(ID_EMPRESARIO);
 
   return await prisma.$transaction(async (tx) => {
+    // Busca a config específica DESTE empresário
     let dispAtual = await tx.dISPONIBILIDADE.findFirst({
-       where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
+       where: { ID_EMPRESARIO: idEmp }
     });
+
+    const dadosDisponibilidade = {
+      DURACAO_MIN: Number(DURACAO_MIN),
+      PERIODOS: PERIODOS || "",
+      DIAS_ATIVOS: DIAS_ATIVOS || ""
+    };
 
     if (dispAtual) {
        dispAtual = await tx.dISPONIBILIDADE.update({
           where: { ID_DISP: dispAtual.ID_DISP },
-          data: {
-             DURACAO_MIN: Number(DURACAO),
-             PERIODOS: PERIODOS,
-             DIAS_ATIVOS: DIAS_ATIVOS
-          }
+          data: dadosDisponibilidade
        });
     } else {
        dispAtual = await tx.dISPONIBILIDADE.create({
           data: {
-             ID_EMPRESARIO: Number(ID_EMPRESARIO),
-             DURACAO_MIN: Number(DURACAO),
-             PERIODOS: PERIODOS,        
-             DIAS_ATIVOS: DIAS_ATIVOS
+             ID_EMPRESARIO: idEmp,
+             ...dadosDisponibilidade
           }
        });
     }
 
+    // Limpa bloqueios antigos apenas desta disponibilidade
     await tx.bLOQUEIO_DISPONIBILIDADE.deleteMany({
        where: { ID_DISP: dispAtual.ID_DISP }
     });
 
+    // Salva novos bloqueios se existirem
     if (BLOQUEIOS && BLOQUEIOS.trim() !== "") {
       const listaBloqueios = BLOQUEIOS.split(',').map(b => {
-        const partes = b.split('T');
-        const hora = partes.length > 1 ? partes[1] : b; 
-        
+        // Se o front enviar "2026-05-01T10:00", guardamos a string completa 
+        // ou apenas a hora, dependendo da sua necessidade de filtro.
         return {
           ID_DISP: dispAtual.ID_DISP,
-          HORA_INICIO: hora,
+          HORA_INICIO: b.trim(), // Salvando a string completa facilita o match no front
           MOTIVO: "Bloqueio Manual"
         };
       });

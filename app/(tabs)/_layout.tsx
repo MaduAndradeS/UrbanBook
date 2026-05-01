@@ -23,8 +23,17 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#000000',
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarIconStyle: { marginTop: 20, alignSelf: 'center' },
-        tabBarStyle: { backgroundColor: '#67C5C0', height: 80, borderTopWidth: 0, elevation: 0, shadowColor: 'transparent' },
+        tabBarIconStyle: {
+          marginTop: 20,
+          alignSelf: 'center',
+        },
+        tabBarStyle: {
+          backgroundColor: '#67C5C0',
+          height: 80,
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowColor: 'transparent',
+        },
       }}
     >
       <Tabs.Screen
@@ -34,6 +43,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="home" size={28} color={color} />,
         }}
       />
+
       <Tabs.Screen
         name="pesquisa_cliente"
         options={{
@@ -41,15 +51,27 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="search" size={28} color={color} />,
         }}
       />
+
+      {/* ABA DE CALENDÁRIO DINÂMICA */}
       <Tabs.Screen
         name="agendamentos"
         options={{
           title: '',
+          href: tipoUsuario === 'CLIENTE' ? '/agendamentos' : null,
           tabBarIcon: ({ color }) => <Ionicons name="calendar" size={28} color={color} />,
         }}
       />
 
-      {/* REGRA DINÂMICA: Redireciona para o ficheiro certo baseado no tipo logado */}
+      <Tabs.Screen
+        name="atendimentos"
+        options={{
+          title: '',
+          href: tipoUsuario === 'EMPRESARIO' ? '/atendimentos' : null,
+          tabBarIcon: ({ color }) => <Ionicons name="calendar" size={28} color={color} />,
+        }}
+      />
+
+      {/* ABAS DE PERFIL DINÂMICAS */}
       <Tabs.Screen
         name="perfil-usuario"
         options={{
@@ -58,6 +80,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
       />
+
       <Tabs.Screen
         name="perfil-empresa"
         options={{
@@ -67,6 +90,8 @@ export default function TabLayout() {
         }}
       />
 
+      {/* PÁGINAS OCULTAS */}
+      <Tabs.Screen name="perfil-empresa-cliente" options={{ href: null }} />
     </Tabs>
   );
 }

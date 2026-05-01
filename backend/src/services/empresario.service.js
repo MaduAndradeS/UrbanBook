@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
 
-//  LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
+// LISTAR EMPRESÁRIOS (COM BUSCA E CATEGORIA)
 exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categoria = null) => {
   const termo = termoBusca?.trim() || undefined;
   const cat = (categoria && categoria !== 'Profissionais') ? categoria : undefined;
@@ -31,12 +31,12 @@ exports.listarEmpresarios = async (termoBusca, apenasAprovados = false, categori
       ENDERECO: true,
       TELEFONE: true,
       SERVICOS: true,
-      FOTO_TRABALHO: true // Mantido no singular conforme seu Schema
+      FOTO_TRABALHO: true 
     }
   });
 };
 
-//  LISTAR EMPRESÁRIOS PENDENTES
+// LISTAR EMPRESÁRIOS PENDENTES
 exports.listarEmpresariosPendentes = async () => {
   return await prisma.eMPRESARIO.findMany({
     where: { ID_ADM: null },
@@ -48,7 +48,7 @@ exports.listarEmpresariosPendentes = async () => {
   });
 };
 
-//  BUSCAR POR ID
+// BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (id) => {
   return await prisma.eMPRESARIO.findUnique({
     where: { ID_EMPRESARIO: id },
@@ -61,8 +61,7 @@ exports.buscarEmpresarioPorId = async (id) => {
   });
 };
 
-
-// criar empresário
+// CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (data) => {
   const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
@@ -75,6 +74,7 @@ exports.criarEmpresario = async (data) => {
       ID_ADM: null
     }
   });
+  
   const coordenadas = await geocodingService.buscarCoordenadas({
     rua: data.rua,
     num: data.num,
@@ -84,21 +84,20 @@ exports.criarEmpresario = async (data) => {
     cep: data.cep
   });
 
-
   await prisma.eNDERECO.create({
-  data: {
-    ID_EMPRESARIO: novoEmpresario.ID_EMPRESARIO,
-    RUA: data.rua,
-    NUM: data.num ? Number(data.num) : null,
-    BAIRRO: data.bairro,
-    CIDADE: data.cidade,
-    ESTADO: data.estado,
-    CEP: data.cep,
-    COMP: data.comp || null,
-    LATITUDE: data.latitude,
-    LONGITUDE: data.longitude
-  }
-});
+    data: {
+      ID_EMPRESARIO: novoEmpresario.ID_EMPRESARIO,
+      RUA: data.rua,
+      NUM: data.num ? Number(data.num) : null,
+      BAIRRO: data.bairro,
+      CIDADE: data.cidade,
+      ESTADO: data.estado,
+      CEP: data.cep,
+      COMP: data.comp || null,
+      LATITUDE: data.latitude,
+      LONGITUDE: data.longitude
+    }
+  });
 
   await prisma.tELEFONE.create({
     data: {
@@ -121,7 +120,7 @@ exports.criarEmpresario = async (data) => {
   return await this.buscarEmpresarioPorId(novoEmpresario.ID_EMPRESARIO);
 };
 
-//  APROVAR EMPRESÁRIO (ADM) - Correção essencial do Pedro aplicada aqui
+// APROVAR EMPRESÁRIO (ADM)
 exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   return await prisma.eMPRESARIO.update({
     where: {
@@ -139,22 +138,37 @@ exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   });
 };
 
-// SALVAR DISPONIBILIDADE 
+// SALVAR DISPONIBILIDADE (CORRIGIDO PARA ATUALIZAR EM VEZ DE APAGAR TUDO)
 exports.salvarDisponibilidade = async (dados) => {
   const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
 
   return await prisma.$transaction(async (tx) => {
-    await tx.dISPONIBILIDADE.deleteMany({
-      where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
+    let dispAtual = await tx.dISPONIBILIDADE.findFirst({
+       where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
     });
 
-    const novaDisp = await tx.dISPONIBILIDADE.create({
-      data: {
-        ID_EMPRESARIO: Number(ID_EMPRESARIO),
-        DURACAO_MIN: Number(DURACAO),
-        PERIODOS: PERIODOS,        
-        DIAS_ATIVOS: DIAS_ATIVOS
-      }
+    if (dispAtual) {
+       dispAtual = await tx.dISPONIBILIDADE.update({
+          where: { ID_DISP: dispAtual.ID_DISP },
+          data: {
+             DURACAO_MIN: Number(DURACAO),
+             PERIODOS: PERIODOS,
+             DIAS_ATIVOS: DIAS_ATIVOS
+          }
+       });
+    } else {
+       dispAtual = await tx.dISPONIBILIDADE.create({
+          data: {
+             ID_EMPRESARIO: Number(ID_EMPRESARIO),
+             DURACAO_MIN: Number(DURACAO),
+             PERIODOS: PERIODOS,        
+             DIAS_ATIVOS: DIAS_ATIVOS
+          }
+       });
+    }
+
+    await tx.bLOQUEIO_DISPONIBILIDADE.deleteMany({
+       where: { ID_DISP: dispAtual.ID_DISP }
     });
 
     if (BLOQUEIOS && BLOQUEIOS.trim() !== "") {
@@ -163,7 +177,7 @@ exports.salvarDisponibilidade = async (dados) => {
         const hora = partes.length > 1 ? partes[1] : b; 
         
         return {
-          ID_DISP: novaDisp.ID_DISP,
+          ID_DISP: dispAtual.ID_DISP,
           HORA_INICIO: hora,
           MOTIVO: "Bloqueio Manual"
         };
@@ -174,10 +188,11 @@ exports.salvarDisponibilidade = async (dados) => {
       });
     }
 
-    return novaDisp;
+    return dispAtual;
   });
 };
 
+// ADICIONAR FOTO DE TRABALHO
 exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   return await prisma.fOTO_TRABALHO.create({
     data: {
@@ -187,17 +202,19 @@ exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
   });
 };
 
+// BUSCAR DISPONIBILIDADE
 exports.buscarDisponibilidadePorId = async (id) => {
   try {
     return await prisma.dISPONIBILIDADE.findFirst({
-      where: { ID_EMPRESARIO: Number(id) }
+      where: { ID_EMPRESARIO: Number(id) },
+      include: { BLOQUEIO_DISPONIBILIDADE: true } // AGORA CARREGA OS BLOQUEIOS!
     });
   } catch (error) {
     console.error("Erro no Prisma ao buscar disponibilidade:", error);
     throw error;
   }
 };
-
+// LISTAR EMPRESÁRIOS PRÓXIMOS (LOCALIZAÇÃO)
 exports.listarEmpresariosProximos = async (lat, lng, raioKm = 10) => {
   const empresarios = await prisma.eMPRESARIO.findMany({
     where: {

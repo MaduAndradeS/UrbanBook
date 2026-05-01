@@ -183,3 +183,16 @@ exports.criarCliente = async (req, res) => {
     });
   }
 };
+
+// NOVA FUNÇÃO CORRIGIDA (AGORA ESTÁ NO LUGAR CERTO)
+exports.atualizarCliente = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome, telefone } = req.body; 
+
+    const cliente = await clienteService.atualizarCliente(id, { nome, telefone });
+    return res.json(removerSenha(cliente));
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao atualizar cliente' });
+  }
+};

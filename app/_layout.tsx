@@ -11,23 +11,23 @@ import logo from '../assets/images/logo.png';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const pathname = usePathname(); // Muito mais seguro que useSegments() para evitar tela branca
+  const pathname = usePathname();
 
-  // Telas que NÃO devem ter o cabeçalho global de jeito nenhum
-  // O '/' garante que a tela de login nunca vai bugar com o cabeçalho
+  // DEFINIÇÃO: Esconde o cabeçalho APENAS no Login e Cadastro
   const esconderCabecalhoGlobal = 
     pathname === '/' || 
     pathname === '/index' || 
-    pathname === '/atendimentos' || 
-    pathname === '/agendamentos' ||
-    pathname === '/cad_cliente' ||
+    pathname === '/cad_cliente' || 
     pathname === '/cad_emp';
 
-  // Telas que têm cabeçalho, mas não devem ter a seta de voltar
+  // DEFINIÇÃO: Esconde a seta de voltar nas 4 abas principais da barra inferior
   const esconderSeta =
-    pathname === '/homepage' ||
-    pathname === '/pesquisa_cliente' ||
-    pathname === '/perfil-usuario';
+    pathname.includes('homepage') ||
+    pathname.includes('pesquisa_cliente') ||
+    pathname.includes('agendamentos') ||
+    pathname.includes('atendimentos') ||
+    pathname.includes('perfil-usuario') ||
+    pathname.includes('perfil-empresa');
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -60,9 +60,8 @@ export default function RootLayout() {
           },
         }}
       >
-        {/* Declarar o index explicitamente ajuda o Expo Router a não se perder */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
       <StatusBar style="auto" />

@@ -83,42 +83,38 @@ export default function Disponibilidade() {
     try {
       const idLogado = await AsyncStorage.getItem('id_usuario');
       if(!idLogado) {
-         Alert.alert("Erro", "Sessão inválida. Faça login novamente.");
-         setCarregando(false);
-         return;
+          Alert.alert("Erro", "Sessão inválida. Faça login novamente.");
+          setCarregando(false);
+          return;
       }
 
       const periodosString = periodos.map(p => `${formatarHora(p.inicio)}-${formatarHora(p.fim)}`).join(',');
       
-      // LÓGICA DE DIAS DA SEMANA RESTAURADA
-      const mapaDias: any = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab' };
-      const diasSemanaUnicos = new Set<string>();
+      // CORREÇÃO: Pegar as datas ISO selecionadas diretamente
+      const datasSelecionadas = Object.keys(diasAtivos).filter(data => diasAtivos[data]);
       
-      Object.keys(diasAtivos).forEach(diaISO => {
-        if(diasAtivos[diaISO]){
-           const dataReal = new Date(`${diaISO}T12:00:00Z`);
-           diasSemanaUnicos.add(mapaDias[dataReal.getUTCDay()]);
-        }
-      });
-      
-      const diasAtivosString = Array.from(diasSemanaUnicos).join(',');
-
-      if (!diasAtivosString) {
+      if (datasSelecionadas.length === 0) {
         Alert.alert("Atenção", "Selecione pelo menos um dia no calendário.");
         setCarregando(false);
         return;
       }
 
-      const bloqueiosString = Object.entries(bloqueados).flatMap(([dia, horas]) => horas.map(h => `${dia}T${h}`)).join(',');
+      const diasAtivosString = datasSelecionadas.join(',');
+
+      const bloqueiosString = Object.entries(bloqueados).flatMap(([dia, horas]) => 
+        horas.map(h => `${dia}T${h}`)
+      ).join(',');
+
+      console.log("Enviando duração:", duracao);
 
       const response = await fetch(`${API_URL}/empresarios/disponibilidade`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ID_EMPRESARIO: idLogado,
-          DURACAO: duracao,
+          ID_EMPRESARIO: Number(idLogado),
+          DURACAO_MIN: Number(duracao), // 👈 Forçamos a conversão para número aqui
           PERIODOS: periodosString,
-          DIAS_ATIVOS: diasAtivosString,
+          DIAS_ATIVOS: diasAtivosString, // Agora envia as datas exatas
           BLOQUEIOS: bloqueiosString
         })
       });
@@ -152,108 +148,63 @@ export default function Disponibilidade() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-
-      <Text style={styles.titulo}>Configuração</Text>
+      <Text style={styles.titulo}>Configuração de Agenda</Text>
 
       <Text style={styles.subtitulo}>Duração do Atendimento</Text>
-      
       <View style={styles.contadorContainer}>
         <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(-5)}>
           <Text style={styles.txtContador}>-</Text>
         </TouchableOpacity>
-        
         <View style={styles.displayContador}>
           <Text style={styles.txtDuracaoDisplay}>
             {Math.floor(duracao / 60) > 0 ? `${Math.floor(duracao / 60)}h ` : ""}
             {duracao % 60}min
           </Text>
         </View>
-
         <TouchableOpacity style={styles.btnContador} onPress={() => alterarDuracao(5)}>
           <Text style={styles.txtContador}>+</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.subtitulo}>Horário de Funcionamento</Text>
-
-      {periodos.map((p: Periodo, i: number) => (
-        <View key={`${p.inicio}-${p.fim}-${i}`} style={styles.periodo}>
-
-          <TouchableOpacity
-            onPress={() => abrirPicker(i, 'inicio')}
-            style={styles.timeBtn}
-          >
+      <Text style={styles.subtitulo}>Horários de Trabalho</Text>
+      {periodos.map((p, i) => (
+        <View key={i} style={styles.periodoRow}>
+          <TouchableOpacity onPress={() => abrirPicker(i, 'inicio')} style={styles.timeBtn}>
             <Text>Início: {formatarHora(p.inicio)}</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => abrirPicker(i, 'fim')}
-            style={styles.timeBtn}
-          >
+          <TouchableOpacity onPress={() => abrirPicker(i, 'fim')} style={styles.timeBtn}>
             <Text>Fim: {formatarHora(p.fim)}</Text>
           </TouchableOpacity>
-
         </View>
       ))}
 
-      <TouchableOpacity
-        onPress={() =>
-          setPeriodos((prev: Periodo[]) => [
-            ...prev,
-            { inicio: new Date(), fim: new Date() }
-          ])
-        }
-      >
-        <Text style={{ marginTop: 15, color: '#007AFF', fontWeight: 'bold' }}>+ Adicionar Horário</Text>
+      <TouchableOpacity onPress={() => setPeriodos([...periodos, { inicio: new Date(), fim: new Date() }])}>
+        <Text style={styles.addBtn}>+ Adicionar Intervalo</Text>
       </TouchableOpacity>
 
-      <Text style={styles.subtitulo}>Selecione os dias da semana</Text>
-
+      <Text style={styles.subtitulo}>Selecione os dias específicos</Text>
       <Calendar
         minDate={hoje}
-        theme={{
-          textDisabledColor: '#d9e1e8',
-          todayTextColor: '#007AFF',
-          selectedDayBackgroundColor: '#000',
-        }}
-        style={{ marginTop: 10, borderRadius: 10, elevation: 2 }}
         onDayPress={(day: DateData) => {
           const dia = day.dateString;
-          
-          if (dia < hoje) return;
-
           const novoEstado = !diasAtivos[dia]; 
           setDiasAtivos(prev => ({ ...prev, [dia]: novoEstado }));
           setDiaSelecionado(dia);
-
-          if (novoEstado) {
-            gerarHorarios(dia);
-          } else {
-            setHorariosPorDia(prev => {
-              const copy = { ...prev };
-              delete copy[dia];
-              return copy;
-            });
-            setBloqueados(prev => {
-              const copy = { ...prev };
-              delete copy[dia];
-              return copy;
-            });
-          }
+          if (novoEstado) gerarHorarios(dia);
         }}
         markedDates={Object.fromEntries(
-          Object.entries(diasAtivos)
-            .filter(([_, ativo]) => ativo)
-            .map(([dia]) => [dia, { selected: true, selectedColor: '#000' }])
+          Object.entries(diasAtivos).filter(([_, a]) => a).map(([d]) => [d, { selected: true, selectedColor: '#67C5C0' }])
         )}
+        theme={{ selectedDayBackgroundColor: '#67C5C0', todayTextColor: '#67C5C0' }}
+        style={styles.calendar}
       />
 
       {diaSelecionado && diasAtivos[diaSelecionado] && (
         <>
           <Text style={styles.subtitulo}>Bloquear horários em {diaSelecionado.split('-').reverse().join('/')}</Text>
-          <View style={styles.lista}>
-            {(horariosPorDia[diaSelecionado] || []).map((h: string) => {
-              const bloqueado = bloqueados[diaSelecionado]?.includes(h);
+          <View style={styles.listaHorarios}>
+            {(horariosPorDia[diaSelecionado] || []).map((h) => {
+              const isBloqueado = bloqueados[diaSelecionado]?.includes(h);
               return (
                 <TouchableOpacity
                   key={h}
@@ -262,15 +213,13 @@ export default function Disponibilidade() {
                       const lista = prev[diaSelecionado] ?? [];
                       return {
                         ...prev,
-                        [diaSelecionado]: lista.includes(h)
-                          ? lista.filter((x: string) => x !== h)
-                          : [...lista, h]
+                        [diaSelecionado]: isBloqueado ? lista.filter(x => x !== h) : [...lista, h]
                       };
                     });
                   }}
-                  style={[styles.horario, { backgroundColor: bloqueado ? '#ccc' : '#000' }]}
+                  style={[styles.chipHorario, { backgroundColor: isBloqueado ? '#FF5252' : '#67C5C0' }]}
                 >
-                  <Text style={{ color: '#fff' }}>{h}</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{h}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -278,43 +227,28 @@ export default function Disponibilidade() {
         </>
       )}
 
-      <TouchableOpacity 
-        style={styles.btnSalvarGeral} 
-        onPress={salvarAgenda}
-        disabled={carregando}
-      >
-        {carregando ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>SALVAR AGENDA</Text>
-        )}
+      <TouchableOpacity style={styles.btnSalvar} onPress={salvarAgenda} disabled={carregando}>
+        {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnSalvarText}>SALVAR DISPONIBILIDADE</Text>}
       </TouchableOpacity>
 
       {showPicker && (
         <View style={styles.pickerOverlay}>
           <View style={styles.pickerBox}>
-            <Text style={styles.pickerTitle}>
-              {tipoPicker === 'inicio' ? 'Selecionar início' : 'Selecionar fim'}
-            </Text>
             <DateTimePicker
               value={periodos[periodoIndex][tipoPicker]}
               mode="time"
               is24Hour
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
-                if (event.type === 'dismissed' || !selectedDate) {
-                  setShowPicker(false);
-                  return;
+              display="spinner"
+              onChange={(event, date) => {
+                if (date) {
+                    const copy = [...periodos];
+                    copy[periodoIndex][tipoPicker] = date;
+                    setPeriodos(copy);
                 }
-                setPeriodos((prev) => {
-                  const copy = [...prev];
-                  copy[periodoIndex] = { ...copy[periodoIndex], [tipoPicker]: selectedDate };
-                  return copy;
-                });
               }}
             />
             <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
-              <Text style={{ color: '#fff' }}>Concluir</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirmar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -324,21 +258,23 @@ export default function Disponibilidade() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: '#ffffff' },
-  titulo: { fontSize: 20, fontWeight: 'bold' },
-  subtitulo: { marginTop: 20, fontWeight: 'bold' },
-  contadorContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f5f5f5', borderRadius: 12, marginTop: 10, padding: 5 },
-  btnContador: { backgroundColor: '#000', width: 45, height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  txtContador: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+  container: { padding: 20, backgroundColor: '#FFF' },
+  titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 10 },
+  subtitulo: { marginTop: 25, fontWeight: 'bold', fontSize: 16, color: '#333' },
+  contadorContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12, marginTop: 10, padding: 10 },
+  btnContador: { backgroundColor: '#333', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  txtContador: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   displayContador: { flex: 1, alignItems: 'center' },
-  txtDuracaoDisplay: { fontSize: 18, fontWeight: '600' },
-  periodo: { marginTop: 10 },
-  timeBtn: { padding: 12, backgroundColor: '#eee', borderRadius: 8, marginTop: 8 },
-  lista: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
-  horario: { padding: 10, borderRadius: 10 },
-  btnSalvarGeral: { marginTop: 40, backgroundColor: '#000', padding: 18, borderRadius: 12, alignItems: 'center', marginBottom: 30 },
-  pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  pickerBox: { width: '90%', backgroundColor: '#000000', borderRadius: 16, padding: 20, alignItems: 'center' },
-  pickerTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#000' },
-  doneButton: { marginTop: 20, backgroundColor: '#000', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' }
+  txtDuracaoDisplay: { fontSize: 18, fontWeight: 'bold' },
+  periodoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  timeBtn: { flex: 0.48, padding: 12, backgroundColor: '#EEE', borderRadius: 10, alignItems: 'center' },
+  addBtn: { marginTop: 15, color: '#67C5C0', fontWeight: 'bold' },
+  calendar: { marginTop: 15, borderRadius: 15, elevation: 3, shadowColor: '#000', shadowOpacity: 0.1 },
+  listaHorarios: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  chipHorario: { padding: 10, borderRadius: 8, minWidth: 60, alignItems: 'center' },
+  btnSalvar: { marginTop: 40, backgroundColor: '#333', padding: 20, borderRadius: 15, alignItems: 'center', marginBottom: 50 },
+  btnSalvarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  pickerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  pickerBox: { backgroundColor: '#000000', borderRadius: 20, padding: 20, width: '90%', alignItems: 'center' },
+  doneButton: { marginTop: 20, backgroundColor: '#67C5C0', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' }
 });

@@ -63,10 +63,14 @@ export default function PerfilEmpresa() {
           setBio(dataP.BIO || '');
           if (dataP.FOTO_PERFIL) setPerfilImg(dataP.FOTO_PERFIL);
           if (dataP.TELEFONE?.length > 0) setTelefone(dataP.TELEFONE[0].TELEFONE);
+          
+          // CORREÇÃO: Mostrando o endereço completo com Cidade e Estado
           if (dataP.ENDERECO?.length > 0) {
             const e = dataP.ENDERECO[0];
-            setEndereco(`${e.RUA}, ${e.NUM} - ${e.BAIRRO}`);
+            const numero = e.NUM || 's/n';
+            setEndereco(`${e.RUA}, ${numero} - ${e.BAIRRO}, ${e.CIDADE} / ${e.ESTADO}`);
           }
+
           setServicos(dataP.SERVICOS || []);
           setFotosTrabalho(dataP.FOTO_TRABALHO || []);
         }
@@ -192,7 +196,6 @@ export default function PerfilEmpresa() {
     ]);
   };
 
-  // LOGICA DE LOGOUT
   const handleLogout = () => {
     Alert.alert("Sair da Conta", "Tem a certeza que deseja terminar sessão?", [
       { text: "Cancelar", style: "cancel" },
@@ -219,7 +222,6 @@ export default function PerfilEmpresa() {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView style={styles.container}>
         
-        {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Image source={{ uri: perfilImg }} style={styles.logoImg} />
@@ -244,7 +246,6 @@ export default function PerfilEmpresa() {
           </View>
         </View>
 
-        {/* CONTEÚDO */}
         <View style={styles.content}>
 
           <TouchableOpacity
@@ -255,7 +256,6 @@ export default function PerfilEmpresa() {
             <Text style={styles.agendaBtnText}>Novo Horário de Atendimento</Text>
           </TouchableOpacity>
 
-          {/* AGENDA */}
           <View style={styles.listaAgendaContainer}>
             {agenda.map((item, i) => (
               <View key={i} style={styles.agendaCard}>
@@ -296,7 +296,6 @@ export default function PerfilEmpresa() {
 
           <View style={styles.divider} />
 
-          {/* PORTFÓLIO COM BOTÃO ADICIONAR */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <Text style={styles.sectionTitle}>Portfólio</Text>
             <TouchableOpacity onPress={handleAddPortfolioPhoto} style={styles.addBtnSmall}>
@@ -311,7 +310,6 @@ export default function PerfilEmpresa() {
             ))}
           </View>
 
-          {/* BOTÃO DE LOGOUT */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
             <MaterialCommunityIcons name="logout" size={24} color="#fff" />
             <Text style={styles.logoutBtnText}>Sair da Conta</Text>

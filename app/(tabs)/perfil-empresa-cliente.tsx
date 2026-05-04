@@ -88,7 +88,7 @@ export default function PerfilEmpresaCliente() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -115,6 +115,17 @@ export default function PerfilEmpresaCliente() {
             <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.actionButtonText}>Agendar Horário</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* CORREÇÃO: Nova secção de Localização no perfil público do profissional */}
+        <Text style={styles.sectionTitle}>Localização</Text>
+        <View style={[styles.box, { flexDirection: 'row', alignItems: 'center' }]}>
+          <MaterialCommunityIcons name="map-marker-outline" size={24} color="#67C5C0" style={{ marginRight: 10 }} />
+          <Text style={[styles.boxText, { flex: 1 }]}>
+            {empresa.ENDERECO?.[0] ? 
+              `${empresa.ENDERECO[0].RUA}, ${empresa.ENDERECO[0].NUM || 's/n'} - ${empresa.ENDERECO[0].BAIRRO}, ${empresa.ENDERECO[0].CIDADE} / ${empresa.ENDERECO[0].ESTADO}` 
+              : 'Endereço não cadastrado.'}
+          </Text>
         </View>
 
         <Text style={styles.sectionTitle}>Sobre</Text>
@@ -191,14 +202,13 @@ const styles = StyleSheet.create({
   actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
-  box: { padding: 15, borderRadius: 12, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee' },
+  box: { padding: 15, borderRadius: 12, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee', marginBottom: 10 },
   boxText: { color: '#666', lineHeight: 22 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
   tag: { backgroundColor: '#67C5C0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
   tagText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   foto: { width: 200, height: 130, borderRadius: 12, marginRight: 10 },
 
-  // Estilos da Foto Ampliada
   modalFotoOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.9)', 

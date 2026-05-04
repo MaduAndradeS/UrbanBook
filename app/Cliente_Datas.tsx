@@ -112,13 +112,23 @@ export default function Cliente_Datas() {
         listaOcupados = data.horasOcupadas || [];
       }
 
+      // CORREÇÃO: LÊ A HORA DE BLOQUEIO SEJA COM A DATA COMPLETA OU SÓ A HORA REDUZIDA
       if (configList.length > 0) {
          configList.forEach(conf => {
             if (conf.BLOQUEIO_DISPONIBILIDADE) {
                conf.BLOQUEIO_DISPONIBILIDADE.forEach((b: any) => {
-                  if (b.HORA_INICIO && b.HORA_INICIO.startsWith(diaSelecionado!)) {
-                     const horaMinuto = b.HORA_INICIO.split('T')[1];
-                     listaOcupados.push(horaMinuto);
+                  if (b.HORA_INICIO) {
+                     const dbHora = String(b.HORA_INICIO);
+                     
+                     if (dbHora.includes('T')) {
+                        // Se for o formato antigo longo (ex: 2026-05-21T15:30)
+                        if (dbHora.startsWith(diaSelecionado!)) {
+                           listaOcupados.push(dbHora.split('T')[1]);
+                        }
+                     } else {
+                        // Se for o formato novo reduzido (ex: 15:30), bloqueia sempre
+                        listaOcupados.push(dbHora);
+                     }
                   }
                });
             }
@@ -144,22 +154,15 @@ export default function Cliente_Datas() {
          return;
       }
 
-      const dataHoraFmt = `${diaSelecionado}T${horaSelecionada}:00-03:00`;
+      const isoDate = new Date(`${diaSelecionado}T${horaSelecionada}:00-03:00`).toISOString();
 
-      // ENVIA TUDO EM MAIÚSCULAS E MINÚSCULAS PARA O SERVIDOR NÃO TER DESCULPAS
       const response = await fetch(`${API_URL}/agendamentos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ID_CLIENTE: Number(idClienteLogado), 
-          id_cliente: Number(idClienteLogado),
           ID_EMPRESARIO: Number(idEmpresario),
-          id_empresario: Number(idEmpresario),
-          DATA_HORA: dataHoraFmt,
-          DATA: diaSelecionado,
-          data: diaSelecionado,
-          HORA: horaSelecionada,
-          hora: horaSelecionada
+          DATA_HORA: isoDate
         })
       });
 
@@ -168,7 +171,7 @@ export default function Cliente_Datas() {
         setSucesso(true);
         buscarOcupados(); 
       } else {
-        Alert.alert("Erro", "Erro ao processar agendamento.");
+        Alert.alert("Erro", "O servidor recusou a gravação do agendamento.");
       }
     } catch (error) {
       Alert.alert("Erro", "Não foi possível falar com o servidor.");

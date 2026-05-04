@@ -138,37 +138,20 @@ exports.aprovarEmpresario = async (idEmpresario, idAdm) => {
   });
 };
 
-// SALVAR DISPONIBILIDADE (CORRIGIDO PARA ATUALIZAR EM VEZ DE APAGAR TUDO)
+// SALVAR DISPONIBILIDADE
 exports.salvarDisponibilidade = async (dados) => {
   const { ID_EMPRESARIO, DURACAO, PERIODOS, DIAS_ATIVOS, BLOQUEIOS } = dados;
 
   return await prisma.$transaction(async (tx) => {
-    let dispAtual = await tx.dISPONIBILIDADE.findFirst({
-       where: { ID_EMPRESARIO: Number(ID_EMPRESARIO) }
-    });
-
-    if (dispAtual) {
-       dispAtual = await tx.dISPONIBILIDADE.update({
-          where: { ID_DISP: dispAtual.ID_DISP },
-          data: {
-             DURACAO_MIN: Number(DURACAO),
-             PERIODOS: PERIODOS,
-             DIAS_ATIVOS: DIAS_ATIVOS
-          }
-       });
-    } else {
-       dispAtual = await tx.dISPONIBILIDADE.create({
-          data: {
-             ID_EMPRESARIO: Number(ID_EMPRESARIO),
-             DURACAO_MIN: Number(DURACAO),
-             PERIODOS: PERIODOS,        
-             DIAS_ATIVOS: DIAS_ATIVOS
-          }
-       });
-    }
-
-    await tx.bLOQUEIO_DISPONIBILIDADE.deleteMany({
-       where: { ID_DISP: dispAtual.ID_DISP }
+    
+    // CORREÇÃO: CRIA SEMPRE UMA NOVA AGENDA EM VEZ DE SUBSTITUIR A ANTIGA!
+    const novaDisp = await tx.dISPONIBILIDADE.create({
+      data: {
+         ID_EMPRESARIO: Number(ID_EMPRESARIO),
+         DURACAO_MIN: Number(DURACAO),
+         PERIODOS: PERIODOS,        
+         DIAS_ATIVOS: DIAS_ATIVOS
+      }
     });
 
     if (BLOQUEIOS && BLOQUEIOS.trim() !== "") {
@@ -177,7 +160,7 @@ exports.salvarDisponibilidade = async (dados) => {
         const hora = partes.length > 1 ? partes[1] : b; 
         
         return {
-          ID_DISP: dispAtual.ID_DISP,
+          ID_DISP: novaDisp.ID_DISP,
           HORA_INICIO: hora,
           MOTIVO: "Bloqueio Manual"
         };
@@ -188,7 +171,7 @@ exports.salvarDisponibilidade = async (dados) => {
       });
     }
 
-    return dispAtual;
+    return novaDisp;
   });
 };
 
@@ -205,15 +188,17 @@ exports.adicionarFotoTrabalho = async (idEmpresario, url) => {
 // BUSCAR DISPONIBILIDADE
 exports.buscarDisponibilidadePorId = async (id) => {
   try {
-    return await prisma.dISPONIBILIDADE.findFirst({
+    // CORREÇÃO: FINDMANY EM VEZ DE FINDFIRST PARA CARREGAR TODAS AS AGENDAS SALVAS
+    return await prisma.dISPONIBILIDADE.findMany({
       where: { ID_EMPRESARIO: Number(id) },
-      include: { BLOQUEIO_DISPONIBILIDADE: true } // AGORA CARREGA OS BLOQUEIOS!
+      include: { BLOQUEIO_DISPONIBILIDADE: true } 
     });
   } catch (error) {
     console.error("Erro no Prisma ao buscar disponibilidade:", error);
     throw error;
   }
 };
+
 // LISTAR EMPRESÁRIOS PRÓXIMOS (LOCALIZAÇÃO)
 exports.listarEmpresariosProximos = async (lat, lng, raioKm = 10) => {
   const empresarios = await prisma.eMPRESARIO.findMany({

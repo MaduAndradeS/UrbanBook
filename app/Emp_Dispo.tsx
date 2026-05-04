@@ -24,8 +24,14 @@ export default function Disponibilidade() {
   const router = useRouter();
   const [duracao, setDuracao] = useState<number>(30); 
 
+  // CORREÇÃO: Horários padrão para garantir que a grelha de bloqueio existe
+  const dataInicioPadrao = new Date();
+  dataInicioPadrao.setHours(8, 0, 0, 0);
+  const dataFimPadrao = new Date();
+  dataFimPadrao.setHours(18, 0, 0, 0);
+
   const [periodos, setPeriodos] = useState<Periodo[]>([
-    { inicio: new Date(), fim: new Date() }
+    { inicio: dataInicioPadrao, fim: dataFimPadrao }
   ]);
 
   const [showPicker, setShowPicker] = useState<boolean>(false);
@@ -90,7 +96,6 @@ export default function Disponibilidade() {
 
       const periodosString = periodos.map(p => `${formatarHora(p.inicio)}-${formatarHora(p.fim)}`).join(',');
       
-      // LÓGICA DE DIAS DA SEMANA RESTAURADA
       const mapaDias: any = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab' };
       const diasSemanaUnicos = new Set<string>();
       
@@ -200,7 +205,7 @@ export default function Disponibilidade() {
         onPress={() =>
           setPeriodos((prev: Periodo[]) => [
             ...prev,
-            { inicio: new Date(), fim: new Date() }
+            { inicio: dataInicioPadrao, fim: dataFimPadrao }
           ])
         }
       >
@@ -222,24 +227,11 @@ export default function Disponibilidade() {
           
           if (dia < hoje) return;
 
-          const novoEstado = !diasAtivos[dia]; 
-          setDiasAtivos(prev => ({ ...prev, [dia]: novoEstado }));
+          // CORREÇÃO: Limpa o estado anterior e seleciona APENAS o novo dia
+          setDiasAtivos({ [dia]: true });
           setDiaSelecionado(dia);
 
-          if (novoEstado) {
-            gerarHorarios(dia);
-          } else {
-            setHorariosPorDia(prev => {
-              const copy = { ...prev };
-              delete copy[dia];
-              return copy;
-            });
-            setBloqueados(prev => {
-              const copy = { ...prev };
-              delete copy[dia];
-              return copy;
-            });
-          }
+          gerarHorarios(dia);
         }}
         markedDates={Object.fromEntries(
           Object.entries(diasAtivos)
@@ -302,10 +294,16 @@ export default function Disponibilidade() {
               is24Hour
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                // CORREÇÃO: Fecha instantaneamente no Android para evitar o Loop de ecrãs
+                if (Platform.OS === 'android') {
+                  setShowPicker(false);
+                }
+                
                 if (event.type === 'dismissed' || !selectedDate) {
                   setShowPicker(false);
                   return;
                 }
+                
                 setPeriodos((prev) => {
                   const copy = [...prev];
                   copy[periodoIndex] = { ...copy[periodoIndex], [tipoPicker]: selectedDate };
@@ -339,6 +337,6 @@ const styles = StyleSheet.create({
   btnSalvarGeral: { marginTop: 40, backgroundColor: '#000', padding: 18, borderRadius: 12, alignItems: 'center', marginBottom: 30 },
   pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   pickerBox: { width: '90%', backgroundColor: '#000000', borderRadius: 16, padding: 20, alignItems: 'center' },
-  pickerTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#000' },
-  doneButton: { marginTop: 20, backgroundColor: '#000', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' }
+  pickerTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#fff' }, // Mudei para #fff para ler no fundo preto
+  doneButton: { marginTop: 20, backgroundColor: '#67C5C0', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' } // Mudei a cor do botão para destacar
 });

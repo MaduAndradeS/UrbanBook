@@ -9,6 +9,8 @@ exports.criarAgendamento = async (req, res) => {
         ID_CLIENTE: Number(ID_CLIENTE),
         ID_EMPRESARIO: Number(ID_EMPRESARIO),
         DATA_HORA: new Date(DATA_HORA),
+        CONFIRMACAO: false,
+        CANCELAMENTO: false
       },
     });
 
@@ -23,22 +25,29 @@ exports.verificarOcupados = async (req, res) => {
   try {
     const { id, data } = req.query;
     
+    // Busca os agendamentos das 00:00 até 23:59 do dia solicitado no fuso do Brasil
     const agendamentos = await prisma.aGENDAMENTO.findMany({
       where: {
         ID_EMPRESARIO: Number(id),
         DATA_HORA: {
-          gte: new Date(`${data}T00:00:00`),
-          lte: new Date(`${data}T23:59:59`),
+          gte: new Date(`${data}T00:00:00-03:00`),
+          lte: new Date(`${data}T23:59:59-03:00`),
         },
       },
     });
 
-    const horasOcupadas = agendamentos.map(a => 
-      new Date(a.DATA_HORA).toISOString().split('T')[1].substring(0, 5)
-    );
+    // Ignora os cancelados e devolve a hora ajustada para o calendário do aplicativo bloquear
+    const horasOcupadas = agendamentos
+      .filter(a => a.CANCELAMENTO !== true)
+      .map(a => {
+        const d = new Date(a.DATA_HORA);
+        d.setUTCHours(d.getUTCHours() - 3); // Puxa para o horário de Brasília
+        return d.toISOString().split('T')[1].substring(0, 5);
+      });
 
     return res.json({ horasOcupadas });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ erro: "Erro ao buscar ocupados" });
   }
 };
@@ -48,30 +57,23 @@ exports.buscarPorEmpresario = async (req, res) => {
     const { id } = req.params;
     const { data } = req.query;
 
+    // AGORA DEVOLVE O FORMATO ORIGINAL DO PRISMA COM A CONEXÃO COMPLETA DO CLIENTE
     const agendamentos = await prisma.aGENDAMENTO.findMany({
       where: { ID_EMPRESARIO: Number(id) },
       include: { CLIENTE: true }
     });
 
-    const formatados = agendamentos
-      .filter(ag => {
-        if (!data) return true;
-        const dateStr = new Date(ag.DATA_HORA).toISOString().split('T')[0];
-        return dateStr === data;
-      })
-      .map(ag => {
-        const dataObj = new Date(ag.DATA_HORA);
-        return {
-          id: ag.ID_AGENDAMENTO,
-          cliente: ag.CLIENTE?.NOME || 'Cliente não identificado',
-          foto: ag.CLIENTE?.FOTO_PERFIL || 'https://via.placeholder.com/50',
-          hora: dataObj.toISOString().substring(11, 16),
-          dataInteira: dataObj.toISOString(),
-          servico: 'Serviço Agendado',
-          status: ag.STATUS || 'Pendente'
-      }});
+    let resultado = agendamentos;
+    if (data) {
+      resultado = agendamentos.filter(ag => {
+        if (!ag.DATA_HORA) return false;
+        const d = new Date(ag.DATA_HORA);
+        d.setUTCHours(d.getUTCHours() - 3);
+        return d.toISOString().split('T')[0] === data;
+      });
+    }
 
-    return res.json(formatados);
+    return res.json(resultado);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ erro: "Erro ao buscar atendimentos" });
@@ -83,28 +85,23 @@ exports.buscarPorCliente = async (req, res) => {
     const { id } = req.params;
     const { data } = req.query;
 
+    // DEVOLVE OS DADOS ORIGINAIS PARA O FRONTEND CONSEGUIR LER A CHECKBOX DE CONFIRMAÇÃO
     const agendamentos = await prisma.aGENDAMENTO.findMany({
       where: { ID_CLIENTE: Number(id) },
       include: { EMPRESARIO: true }
     });
 
-    const formatados = agendamentos
-      .filter(ag => {
-        if (!data) return true;
-        const dateStr = new Date(ag.DATA_HORA).toISOString().split('T')[0];
-        return dateStr === data;
-      })
-      .map(ag => {
-        const dataObj = new Date(ag.DATA_HORA);
-        return {
-          id: ag.ID_AGENDAMENTO,
-          empresa: ag.EMPRESARIO?.NOME || 'Empresa não identificada',
-          hora: dataObj.toISOString().substring(11, 16),
-          dataInteira: dataObj.toISOString(),
-          status: ag.STATUS || 'Pendente'
-      }});
+    let resultado = agendamentos;
+    if (data) {
+      resultado = agendamentos.filter(ag => {
+         if (!ag.DATA_HORA) return false;
+         const d = new Date(ag.DATA_HORA);
+         d.setUTCHours(d.getUTCHours() - 3);
+         return d.toISOString().split('T')[0] === data;
+      });
+    }
 
-    return res.json(formatados);
+    return res.json(resultado);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ erro: "Erro ao buscar agendamentos" });
@@ -116,11 +113,11 @@ exports.aprovarAgendamento = async (req, res) => {
     const { id } = req.params;
     const atualizado = await prisma.aGENDAMENTO.update({
       where: {
-        ID_AGENDAMENTO: Number(id) // Garante que o ID é um número
+        ID_AGENDAMENTO: Number(id)
       },
       data: {
-        CONFIRMACAO: true,  // MARCA A CHECKBOX DE CONFIRMADO
-        CANCELAMENTO: false // GARANTE QUE NÃO ESTÁ CANCELADO
+        CONFIRMACAO: true,
+        CANCELAMENTO: false
       }
     });
     return res.json(atualizado);
@@ -133,10 +130,12 @@ exports.aprovarAgendamento = async (req, res) => {
 exports.rejeitarAgendamento = async (req, res) => {
   try {
     const { id } = req.params;
-    // Apaga o agendamento do banco para liberar o horário
+    
+    // Deleta do banco para libertar o horário para outro cliente
     await prisma.aGENDAMENTO.delete({
       where: { ID_AGENDAMENTO: Number(id) }
     });
+    
     return res.json({ sucesso: true });
   } catch (error) {
     console.error(error);

@@ -51,7 +51,7 @@ export default function PerfilUsuarioScreen() {
         return;
       }
 
-      // 1. Tenta carregar os dados do Cliente primeiro
+      // 1. Carrega os dados do Cliente
       try {
         const resCliente = await fetch(`${API_URL}/clientes/${idSalvo}`);
         if (resCliente.ok) {
@@ -66,16 +66,38 @@ export default function PerfilUsuarioScreen() {
         console.log('Erro ao buscar perfil:', error);
       }
 
-      // 2. LIBERA A TELA PARA O UTILIZADOR (não fica mais travado)
       setLoading(false);
 
-      // 3. Tenta carregar os agendamentos de forma silenciosa
+      // 2. Carrega o Próximo Agendamento convertendo os dados novos do Prisma
       try {
         const resAgendamentos = await fetch(`${API_URL}/agendamentos/cliente/${idSalvo}`);
         if (resAgendamentos.ok) {
           const dataAg = await resAgendamentos.json();
-          if (Array.isArray(dataAg) && dataAg.length > 0) {
-            setProximoAgendamento(dataAg[0]);
+          
+          // Ignora os cancelados
+          const validos = Array.isArray(dataAg) ? dataAg.filter(a => a.CANCELAMENTO !== true) : [];
+          
+          if (validos.length > 0) {
+            const ag = validos[0]; // Pega o primeiro
+            
+            let dateFmt = 'Sem Data';
+            let timeFmt = '00:00';
+            
+            // Extrai a data e a hora separadas
+            if (ag.DATA_HORA) {
+               const dObj = new Date(ag.DATA_HORA);
+               dateFmt = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
+               timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+            }
+
+            setProximoAgendamento({
+              empresa: ag.EMPRESARIO?.NOME || 'Profissional',
+              data: dateFmt,
+              hora: timeFmt,
+              status: ag.CONFIRMACAO ? 'Confirmado' : 'Pendente'
+            });
+          } else {
+            setProximoAgendamento(null);
           }
         }
       } catch (error) {
@@ -139,7 +161,7 @@ export default function PerfilUsuarioScreen() {
         Alert.alert('Sucesso', 'Dados atualizados!');
         setModalEditarVisible(false);
       } else {
-        Alert.alert('Erro', 'Verifica se o backend está a correr e com a rota PUT criada.');
+        Alert.alert('Erro', 'Verifique o terminal do servidor.');
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
@@ -155,16 +177,11 @@ export default function PerfilUsuarioScreen() {
     ]);
   };
 
-  // FUNDO BRANCO ADICIONADO PARA EVITAR TELA PRETA
   if (loading) return <View style={s.loadingCenter}><ActivityIndicator size="large" color="#67C5C0" /></View>;
 
   return (
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.headerContainer}>
-          <Text style={s.header}>Urban Book</Text>
-          <Image source={logo} style={s.topIcon} />
-        </View>
 
         <View style={s.profile}>
           <View style={s.avatarContainer}>
@@ -184,9 +201,11 @@ export default function PerfilUsuarioScreen() {
           <TouchableOpacity style={s.agendamentoCard} onPress={() => router.push('/(tabs)/agendamentos')}>
             <View style={s.agendamentoIcone}><MaterialCommunityIcons name="calendar-clock" size={28} color="#67C5C0" /></View>
             <View style={s.agendamentoInfo}>
-              <Text style={s.agendamentoEmpresa}>{proximoAgendamento.EMPRESARIO?.NOME || 'Profissional'}</Text>
-              <Text style={s.agendamentoData}>{proximoAgendamento.DATA} às {proximoAgendamento.HORA}</Text>
-              <Text style={s.agendamentoStatus}>Status: {proximoAgendamento.STATUS}</Text>
+              <Text style={s.agendamentoEmpresa}>{proximoAgendamento.empresa}</Text>
+              <Text style={s.agendamentoData}>{proximoAgendamento.data} às {proximoAgendamento.hora}</Text>
+              <Text style={[s.agendamentoStatus, { color: proximoAgendamento.status === 'Confirmado' ? '#2DC26B' : '#F5A623' }]}>
+                Status: {proximoAgendamento.status}
+              </Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
           </TouchableOpacity>
@@ -270,11 +289,8 @@ export default function PerfilUsuarioScreen() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scroll: { flex: 1, paddingHorizontal: 20 },
-  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }, // FUNDO BRANCO AQUI
-  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: 4 },
-  header: { fontSize: 26, fontWeight: 'bold', color: 'gray' },
-  topIcon: { width: 50, height: 50, resizeMode: 'contain' },
-  profile: { alignItems: 'center', marginVertical: 30 },
+  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  profile: { alignItems: 'center', marginTop: 20, marginBottom: 30 },
   avatarContainer: { position: 'relative' },
   avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: '#67C5C0' },
   cameraBtn: { position: 'absolute', bottom: 0, right: 5, backgroundColor: '#333', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
@@ -287,7 +303,7 @@ const s = StyleSheet.create({
   agendamentoInfo: { flex: 1 },
   agendamentoEmpresa: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   agendamentoData: { fontSize: 14, color: '#555', marginTop: 2 },
-  agendamentoStatus: { fontSize: 12, color: '#67C5C0', fontWeight: 'bold', marginTop: 4, textTransform: 'uppercase' },
+  agendamentoStatus: { fontSize: 12, fontWeight: 'bold', marginTop: 4, textTransform: 'uppercase' },
   semAgendamentoBox: { padding: 15, backgroundColor: '#f9f9f9', borderRadius: 10, alignItems: 'center' },
   semAgendamentoText: { color: '#777', fontStyle: 'italic' },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },

@@ -18,6 +18,7 @@ router.get('/pendentes', empresarioController.listarEmpresariosPendentes);
 router.get('/proximos', empresarioController.listarEmpresariosProximos);
 router.get('/:id/disponibilidade', empresarioController.buscarDisponibilidade);
 router.post('/disponibilidade', empresarioController.configurarDisponibilidade);
+router.delete('/disponibilidade/:id', empresarioController.excluirDisponibilidade);
 router.patch('/:id/aprovar', empresarioController.aprovarEmpresario);
 
 // --- BUSCA POR ID (SEMPRE POR ÚLTIMO) ---

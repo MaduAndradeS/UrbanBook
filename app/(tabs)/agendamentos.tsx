@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -24,6 +25,8 @@ interface Appointment {
   day: number;
   month: number; 
   year: number;
+  foto: string | null; // Adicionado suporte para foto
+  isCancelado: boolean;
 }
 
 function filterByMonth(data: Appointment[], month: number, year: number) {
@@ -74,40 +77,33 @@ export default function AgendamentosScreen() {
           const idAgendamento = ag.ID_AGENDAMENTO || ag.ID_AGENDA || ag.id;
           const id = String(idAgendamento || Math.random());
           
-          // LÊ A CHECKBOX "CONFIRMACAO" DO SEU BANCO DE DADOS
-          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true || String(ag.STATUS || '').toLowerCase() === 'confirmado';
+          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true;
+          const isCancelado = ag.CANCELAMENTO === true || ag.cancelamento === true;
           const status: Status = isConfirmado ? 'confirmado' : 'pendente';
           
           const name = ag.EMPRESARIO?.NOME || ag.empresa || 'Profissional';
+          const foto = ag.EMPRESARIO?.FOTO_PERFIL || null; // Puxa a foto do Empresário
           
           let day = 1, monthAg = 0, yearAg = 2026;
-          let dateFmt = '00/00/0000', timeFmt = ag.hora || ag.HORA || '00:00';
+          let dateFmt = 'Sem Data', timeFmt = '00:00';
           
-          const rawDate = ag.DATA_HORA || ag.DATA || ag.createdAt;
+          let rawDate = ag.DATA_HORA || ag.data_hora || ag.createdAt;
           if (rawDate) {
-              if (typeof rawDate === 'string' && rawDate.includes('T')) {
+              rawDate = String(rawDate);
+              if (rawDate.includes('T')) {
                   const dObj = new Date(rawDate);
+                  dObj.setUTCHours(dObj.getUTCHours() - 3); // Corrige Fuso para o calendário marcar certo
                   day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
                   dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
-                  if (timeFmt === '00:00') {
-                      timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
-                  }
-              } else if (typeof rawDate === 'string' && rawDate.includes('-')) {
-                  const [y, m, d] = rawDate.split('-').map(Number);
-                  day = d; monthAg = m - 1; yearAg = y;
-                  dateFmt = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
-              } else if (typeof rawDate === 'string' && rawDate.includes('/')) {
-                  dateFmt = rawDate;
-                  const [d, m, y] = rawDate.split('/').map(Number);
-                  day = d; monthAg = m - 1; yearAg = y;
+                  timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
               }
           }
 
-          return { id, name, date: dateFmt, time: timeFmt, status, day, month: monthAg, year: yearAg };
+          return { id, name, date: dateFmt, time: timeFmt, status, day, month: monthAg, year: yearAg, foto, isCancelado };
         });
         
-        const convertidosLimpos = convertidos.filter(item => item.date !== '00/00/0000');
-        setMonthData(filterByMonth(convertidosLimpos, month, year));
+        const convertidosValidos = convertidos.filter(item => !item.isCancelado && item.date !== 'Sem Data');
+        setMonthData(filterByMonth(convertidosValidos, month, year));
       } else {
         setMonthData([]);
       }
@@ -157,7 +153,14 @@ export default function AgendamentosScreen() {
           const cfg = STATUS[item.status];
           return (
             <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
-              <View style={s.iconCircle}><Text style={s.iconEmoji}>{cfg.icon}</Text></View>
+              <View style={s.iconCircle}>
+                {/* Lógica da Imagem Ativada */}
+                {item.foto ? (
+                  <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
+                ) : (
+                  <Text style={s.iconEmoji}>{cfg.icon}</Text>
+                )}
+              </View>
               <View style={s.cardInfo}>
                 <Text style={s.cardName}>{item.name}</Text>
                 <Text style={s.cardDate}>{item.date} • {item.time}</Text>
@@ -174,7 +177,14 @@ export default function AgendamentosScreen() {
               const cfg = STATUS[item.status];
               return (
                 <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
-                  <View style={s.iconCircle}><Text style={s.iconEmoji}>{cfg.icon}</Text></View>
+                  <View style={s.iconCircle}>
+                    {/* Lógica da Imagem Ativada */}
+                    {item.foto ? (
+                      <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
+                    ) : (
+                      <Text style={s.iconEmoji}>{cfg.icon}</Text>
+                    )}
+                  </View>
                   <View style={s.cardInfo}>
                     <Text style={s.cardName}>{item.name}</Text>
                     <Text style={s.cardDate}>{item.date} • {item.time}</Text>
@@ -200,6 +210,7 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
   card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, alignItems: 'center' },
   iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  fotoAvatar: { width: 48, height: 48, borderRadius: 24 }, // Estilo da Foto Adicionado
   iconEmoji:  { fontSize: 22 },
   cardInfo:   { flex: 1 },
   cardName:   { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 3 },

@@ -118,7 +118,8 @@ export default function Calendar({
             >
               {/* Círculo separado do wrapper — garante alinhamento correto */}
               <View style={[st.circle, { backgroundColor: circleBg }]}>
-                <Text style={{ fontSize: 13, color: textColor, fontWeight, lineHeight: CIRCLE_SIZE }}>
+                {/* Removido o lineHeight daqui para evitar que o Android corte o círculo transformando-o num quadrado */}
+                <Text style={{ fontSize: 14, color: textColor, fontWeight }}>
                   {cell.day}
                 </Text>
               </View>
@@ -179,9 +180,10 @@ const st = StyleSheet.create({
   circle: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
+    borderRadius: 50, // Garante que será sempre redondo
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden', // Corta qualquer excesso que possa causar o formato quadrado
   },
   legend: {
     flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 10,

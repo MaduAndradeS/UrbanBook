@@ -2,18 +2,18 @@ import Calendar from '@/components/calendar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Modal, Pressable,
   SafeAreaView,
   ScrollView, StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Image
+  View
 } from 'react-native';
-import logo from '../../assets/images/logo.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.225:3333/api';
-const ID_EMPRESARIO = 5;
+import { API_URL } from '../../config/api';
 
 type Status = 'confirmado' | 'pendente';
 
@@ -27,6 +27,8 @@ interface Appointment {
   day: number;
   month: number;
   year: number;
+  foto: string | null;
+  isCancelado: boolean;
 }
 
 function filterByMonth(data: Appointment[], month: number, year: number) {
@@ -41,7 +43,7 @@ function pendingOnlyDays(data: Appointment[]) {
 }
 
 const INITIAL_YEAR  = 2026;
-const INITIAL_MONTH = 3; 
+const INITIAL_MONTH = 4;
 
 export default function AtendimentosScreen() {
   const [year, setYear]             = useState(INITIAL_YEAR);
@@ -61,26 +63,51 @@ export default function AtendimentosScreen() {
   async function buscarDoBanco() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/agendamentos/empresario/${ID_EMPRESARIO}`);
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (!idSalvo) {
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/agendamentos/empresario/${idSalvo}`);
       if (res.ok) {
         const banco = await res.json();
         const dadosSeguros = Array.isArray(banco) ? banco : [];
+        
         const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {
-          const d = new Date(ag.dataInteira || ag.DATA_HORA || new Date());
-          return {
-            id: String(ag.id),
-            name: ag.cliente || 'Sem nome',
-            date: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth()+1).padStart(2, '0')}/${d.getUTCFullYear()}`,
-            time: ag.hora || '00:00',
-            service: ag.servico || 'Serviço',
-            status: (ag.status || '').toLowerCase() === 'confirmado' ? 'confirmado' : 'pendente',
-            day: d.getUTCDate(),
-            month: d.getUTCMonth(),
-            year: d.getUTCFullYear()
-          };
+          const idAgendamento = ag.ID_AGENDAMENTO || ag.ID_AGENDA || ag.id;
+          const id = String(idAgendamento || Math.random());
+          
+          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true;
+          const isCancelado = ag.CANCELAMENTO === true || ag.cancelamento === true;
+          const status: Status = isConfirmado ? 'confirmado' : 'pendente';
+          
+          const name = ag.CLIENTE?.NOME || ag.cliente || 'Cliente';
+          const foto = ag.CLIENTE?.FOTO_PERFIL || null; 
+          const service = ag.SERVICO?.NOME || ag.servico || 'Serviço';
+          
+          let day = 1, monthAg = 0, yearAg = 2026;
+          let dateFmt = 'Sem Data', timeFmt = '00:00';
+          
+          let rawDate = ag.DATA_HORA || ag.data_hora || ag.createdAt;
+          if (rawDate) {
+              rawDate = String(rawDate);
+              if (rawDate.includes('T')) {
+                  const dObj = new Date(rawDate);
+                  dObj.setUTCHours(dObj.getUTCHours() - 3); 
+                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
+                  timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+              }
+          }
+
+          return { id, name, date: dateFmt, time: timeFmt, service, status, day, month: monthAg, year: yearAg, foto, isCancelado };
         });
-        setMonthData(filterByMonth(convertidos, month, year));
-        setNotificacoes(convertidos.filter(a => a.status === 'pendente'));
+
+        const convertidosValidos = convertidos.filter(item => !item.isCancelado && item.date !== 'Sem Data');
+
+        setMonthData(filterByMonth(convertidosValidos, month, year));
+        setNotificacoes(convertidosValidos.filter(a => a.status === 'pendente'));
       }
     } catch (error) {
       console.log(error);
@@ -90,39 +117,40 @@ export default function AtendimentosScreen() {
   }
 
   const responderAgendamento = async (id: string, acao: 'aprovar' | 'rejeitar') => {
+    if (!id || id.includes('0.')) {
+        Alert.alert("Erro", "O ID deste agendamento não foi encontrado no banco de dados.");
+        return;
+    }
+
     try {
       const metodo = acao === 'aprovar' ? 'PUT' : 'DELETE';
-      const res = await fetch(`${API_URL}/agendamentos/${id}/${acao}`, { method: metodo });
-      if (res.ok) {
+      const response = await fetch(`${API_URL}/agendamentos/${id}/${acao}`, { 
+          method: metodo,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ CONFIRMACAO: true })
+      });
+
+      if (response.ok) {
+        Alert.alert("Sucesso", `Agendamento ${acao === 'aprovar' ? 'confirmado' : 'recusado'}!`);
         setNotifVisible(false);
         buscarDoBanco();
+      } else {
+        Alert.alert("Erro", "O servidor recusou a operação.");
       }
     } catch (e) {
-      console.log(e);
+      Alert.alert("Erro", "Falha de conexão com a internet.");
     }
   };
 
   return (
     <SafeAreaView style={s.safeArea}>
-      
-      {/* 🟢 CABEÇALHO 100% LIVRE DE BLOQUEIOS (Sininho vai funcionar aqui) */}
-      <View style={s.headerGlobalSimulado}>
-         <View style={s.headerInner}>
-            <Text style={s.urbanText}>Urban Book</Text>
-            <View style={s.headerIcons}>
-               <TouchableOpacity 
-                 style={s.notifBtn} 
-                 onPress={() => setNotifVisible(true)}
-                 activeOpacity={0.5}
-               >
-                 <Text style={{ fontSize: 24 }}>🔔</Text>
-                 {naoLidas > 0 && (
-                   <View style={s.badge}><Text style={s.badgeText}>{naoLidas}</Text></View>
-                 )}
-               </TouchableOpacity>
-               <Image source={logo} style={s.logoImage} />
-            </View>
-         </View>
+
+      {/* LINHA DO SININHO FORA DO CABEÇALHO */}
+      <View style={s.topBarRow}>
+         <TouchableOpacity style={s.notifBtn} onPress={() => setNotifVisible(true)}>
+           <Text style={{ fontSize: 22 }}>🔔</Text>
+           {naoLidas > 0 && <View style={s.badge}><Text style={s.badgeText}>{naoLidas}</Text></View>}
+         </TouchableOpacity>
       </View>
 
       <Modal visible={notifVisible} transparent animationType="fade">
@@ -131,11 +159,11 @@ export default function AtendimentosScreen() {
             <Text style={s.notifTitle}>Solicitações Pendentes</Text>
             {notificacoes.map(n => (
               <View key={n.id} style={s.notifItem}>
-                <Text style={s.notifItemTitulo}>Solicitação de {n.name}</Text>
+                <Text style={s.notifItemTitulo}>{n.name}</Text>
                 <Text style={s.notifItemMsg}>{n.date} às {n.time}</Text>
                 <View style={s.actionsRow}>
                   <TouchableOpacity style={s.btnAprovar} onPress={() => responderAgendamento(n.id, 'aprovar')}>
-                    <Text style={s.btnTextNotif}>✓ Aprovar</Text>
+                    <Text style={s.btnTextNotif}>✓ Aceitar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.btnRecusar} onPress={() => responderAgendamento(n.id, 'rejeitar')}>
                     <Text style={s.btnTextNotif}>✕ Recusar</Text>
@@ -150,26 +178,26 @@ export default function AtendimentosScreen() {
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.sectionTitleMain}>Meus Atendimentos</Text>
-        
         <View style={s.calendarCard}>
           {loading ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} /> : (
             <Calendar 
-              initialYear={INITIAL_YEAR} 
-              initialMonth={INITIAL_MONTH} 
-              selectedDay={selectedDay} 
-              onSelectDay={(day) => setDay(day)} 
-              onMonthChange={(m, y) => { setMonth(m); setYear(y); setDay(1); }} 
-              confirmedDays={confirmedDays(monthData)} 
-              pendingDays={pendingOnlyDays(monthData)} 
+              initialYear={INITIAL_YEAR} initialMonth={INITIAL_MONTH} selectedDay={selectedDay} 
+              onSelectDay={(day) => setDay(day)} onMonthChange={(m, y) => { setMonth(m); setYear(y); setDay(1); }} 
+              confirmedDays={confirmedDays(monthData)} pendingDays={pendingOnlyDays(monthData)} 
             />
           )}
         </View>
 
         <Text style={s.sectionTitle}>Atendimentos do dia {selectedDay}</Text>
-
         {monthData.filter(a => a.day === selectedDay).map(item => (
           <View key={item.id} style={s.card}>
-            <View style={s.avatarCircle}><Text style={s.avatarInitial}>{item.name.charAt(0)}</Text></View>
+            <View style={s.avatarCircle}>
+              {item.foto ? (
+                 <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
+              ) : (
+                 <Text style={s.avatarInitial}>{item.name.charAt(0)}</Text>
+              )}
+            </View>
             <View style={s.cardInfo}>
               <Text style={s.cardName}>{item.name}</Text>
               <Text style={s.cardDate}>{item.date} • {item.time}</Text>
@@ -187,22 +215,20 @@ export default function AtendimentosScreen() {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  // PaddingTop ajustado para o cabeçalho novo não encostar no topo da tela do celular
-  headerGlobalSimulado: { backgroundColor: '#fff', paddingTop: 45, paddingBottom: 10 },
-  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  urbanText: { fontSize: 30, fontWeight: 'bold', color: '#757575' },
-  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  logoImage: { width: 65, height: 60 },
-  notifBtn: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: 2, right: 2, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
+  
+  // Estilos da nova barra do sininho
+  topBarRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5 },
+  notifBtn: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', borderRadius: 22.5, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
+  badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E53935', borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-
+  
   scroll: { flex: 1, paddingHorizontal: 20 },
-  sectionTitleMain: { fontSize: 26, fontWeight: 'bold', color: '#111', marginTop: 10, marginBottom: 15 },
+  sectionTitleMain: { fontSize: 26, fontWeight: 'bold', color: '#111', marginTop: 5, marginBottom: 15 },
   calendarCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 15 },
   card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 15, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, alignItems: 'center' },
   avatarCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#67C5C0', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  fotoAvatar: { width: 50, height: 50, borderRadius: 25 },
   avatarInitial: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   cardInfo: { flex: 1 },
   cardName: { fontSize: 15, fontWeight: '700' },

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,6 +32,11 @@ type EmpresarioApi = {
   SERVICOS?: Array<{
     NOME: string;
   }>;
+  FOTO_TRABALHO?: Array<{
+    ID_FOTO: number;
+    URL: string;
+    ID_EMPRESARIO: number;
+  }>;
 };
 
 type CardItem = {
@@ -39,6 +45,7 @@ type CardItem = {
   categorias: string[];
   endereco: string;
   imgPerfil: string | null;
+  imgTrabalho: string | null;
   distanciaKm?: number;
 };
 
@@ -143,11 +150,23 @@ export default function HomeCliente() {
   const [buscandoEndereco, setBuscandoEndereco] = useState(false);
   const [localizacaoTexto, setLocalizacaoTexto] = useState('Localização atual');
 
-  const tipoUsuario: 'cliente' | 'empresario' = 'cliente';
-  const idEmpresarioLogado: number | null = null;
+  // Estados dinâmicos que carregam do AsyncStorage
+  const [meuId, setMeuId] = useState<number | null>(null);
+  const [meuTipo, setMeuTipo] = useState<string | null>(null);
 
   useEffect(() => {
-    carregarEmpresariosProximos();
+    async function carregarDadosIniciais() {
+      // 1. Carrega os dados de quem está logado (Regra da Júlia)
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      const tipoSalvo = await AsyncStorage.getItem('tipo_usuario');
+      if (idSalvo) setMeuId(Number(idSalvo));
+      if (tipoSalvo) setMeuTipo(tipoSalvo);
+
+      // 2. Carrega as empresas ao redor
+      carregarEmpresariosProximos();
+    }
+
+    carregarDadosIniciais();
   }, []);
 
   function formatarEmpresarios(json: EmpresarioApi[]): CardItem[] {
@@ -173,6 +192,10 @@ export default function HomeCliente() {
         categorias: (item.SERVICOS || []).map((s) => s.NOME),
         endereco,
         imgPerfil: item.FOTO_PERFIL || null,
+        imgTrabalho:
+          item.FOTO_TRABALHO && item.FOTO_TRABALHO.length > 0
+            ? item.FOTO_TRABALHO[0].URL
+            : null,
         distanciaKm: item.DISTANCIA_KM
       };
     });
@@ -193,7 +216,7 @@ export default function HomeCliente() {
       setErro('');
 
       const response = await fetch(
-        `${API_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=10`
+        `${API_URL}/empresarios/proximos?lat=${latitude}&lng=${longitude}&raio=25`
       );
 
       const json: EmpresarioApi[] = await response.json();
@@ -270,43 +293,40 @@ export default function HomeCliente() {
   }
 
   async function selecionarEndereco(item: ResultadoEndereco) {
-  const partes = item.endereco.split(',').map((p) => p.trim());
+    const partes = item.endereco.split(',').map((p) => p.trim());
 
-  const cidade = partes.find((p) =>
-    ['Campinas', 'Valinhos', 'Vinhedo', 'Hortolândia', 'Sumaré'].includes(p)
-  );
+    const cidade = partes.find((p) =>
+      ['Campinas', 'Valinhos', 'Vinhedo', 'Hortolândia', 'Sumaré'].includes(p)
+    );
 
-  const bairroOuRegiao = partes[0];
+    const bairroOuRegiao = partes[0];
 
-  const enderecoCurto = cidade
-    ? `${bairroOuRegiao}, ${cidade} - SP`
-    : partes.slice(0, 2).join(', ');
+    const enderecoCurto = cidade
+      ? `${bairroOuRegiao}, ${cidade} - SP`
+      : partes.slice(0, 2).join(', ');
 
-  setLocalizacaoTexto(enderecoCurto);
-  setModalLocalizacao(false);
-  setTextoEndereco('');
-  setResultadoEndereco([]);
+    setLocalizacaoTexto(enderecoCurto);
+    setModalLocalizacao(false);
+    setTextoEndereco('');
+    setResultadoEndereco([]);
 
-  await buscarEmpresariosPorCoordenadas(item.latitude, item.longitude);
-}
+    await buscarEmpresariosPorCoordenadas(item.latitude, item.longitude);
+  }
 
   function abrirPerfilEmpresa(item: CardItem) {
     const idClicado = Number(item.id);
 
+    // Lógica correta de navegação
     const clicouNaPropriaEmpresa =
-      tipoUsuario === 'empresario' &&
-      idEmpresarioLogado !== null &&
-      idEmpresarioLogado === idClicado;
+      meuTipo === 'EMPRESARIO' &&
+      meuId !== null &&
+      meuId === idClicado;
 
     if (clicouNaPropriaEmpresa) {
-      router.push('/perfil-empresa');
-      return;
+      router.push('/(tabs)/perfil-empresa');
+    } else {
+      router.push(`/(tabs)/perfil-empresa-cliente?id=${item.id}`);
     }
-
-    router.push({
-      pathname: '/perfil-empresa-cliente',
-      params: { id: item.id }
-    });
   }
 
   const conteudo = useMemo(() => {
@@ -381,6 +401,13 @@ export default function HomeCliente() {
                   )}
                 </View>
               </View>
+
+              {item.imgTrabalho && (
+                <Image
+                  source={{ uri: item.imgTrabalho }}
+                  style={styles.imgTrabalhoLateral}
+                />
+              )}
             </View>
 
             <Text style={styles.endereco}>{item.endereco}</Text>
@@ -505,26 +532,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff'
   },
-
   scrollContent: {
     paddingBottom: 20,
     paddingHorizontal: 10
   },
-
   localizacaoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 0,
     marginBottom: 10
   },
-
   localizacao: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     maxWidth: '95%'
   },
-
   textLocalizacao: {
     marginLeft: 5,
     marginRight: 4,
@@ -533,11 +556,9 @@ const styles = StyleSheet.create({
     color: '#000',
     maxWidth: 280
   },
-
   lista: {
     paddingHorizontal: 10
   },
-
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
@@ -549,72 +570,60 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4
   },
-
   cardTop: {
     flexDirection: 'row',
     alignItems: 'flex-start'
   },
-
   imgPerfil: {
     width: 60,
     height: 60,
     borderRadius: 30,
     marginRight: 10
   },
-
   imgPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center'
   },
-
   avatarTexto: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700'
   },
-
   info: {
     flex: 1
   },
-
   nome: {
     fontSize: 16,
     color: '#000',
     fontWeight: '500',
     marginBottom: 2
   },
-
   distancia: {
     fontSize: 12,
     color: '#555',
     marginBottom: 3
   },
-
   estrelas: {
     flexDirection: 'row',
     marginBottom: 5
   },
-
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap'
   },
-
   tag: {
-    backgroundColor: '#59D6F2',
+    backgroundColor: '#67C5C0',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginRight: 5,
     marginBottom: 5
   },
-
   tagText: {
     fontSize: 11,
     fontWeight: '500',
     color: '#fff'
   },
-
   endereco: {
     marginTop: 8,
     fontSize: 12,
@@ -622,44 +631,37 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center'
   },
-
   estadoContainer: {
     paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center'
   },
-
   estadoTexto: {
     marginTop: 10,
     fontSize: 15,
     color: '#333'
   },
-
   estadoErro: {
     fontSize: 15,
     color: '#b00020',
     textAlign: 'center',
     marginBottom: 12
   },
-
   botaoRecarregar: {
     backgroundColor: '#59D6F2',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8
   },
-
   botaoRecarregarTexto: {
     color: '#fff',
     fontWeight: '600'
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end'
   },
-
   modalBox: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
@@ -667,20 +669,17 @@ const styles = StyleSheet.create({
     padding: 20,
     minHeight: '68%'
   },
-
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16
   },
-
   modalTitulo: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#000'
   },
-
   botaoLocalizacaoAtual: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -690,14 +689,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12
   },
-
   botaoLocalizacaoAtualTexto: {
     marginLeft: 8,
     fontSize: 15,
     fontWeight: '600',
     color: '#000'
   },
-
   inputEnderecoBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -708,14 +705,12 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 12
   },
-
   inputEndereco: {
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
     color: '#000'
   },
-
   botaoBuscarEndereco: {
     backgroundColor: '#000',
     height: 46,
@@ -724,36 +719,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16
   },
-
   botaoBuscarEnderecoTexto: {
     color: '#fff',
     fontWeight: 'bold'
   },
-
   itemEndereco: {
     flexDirection: 'row',
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee'
   },
-
   itemEnderecoInfo: {
     marginLeft: 10,
     flex: 1
   },
-
   itemEnderecoTexto: {
     fontSize: 15,
     color: '#000',
     fontWeight: '500'
   },
-
   itemEnderecoCoordenadas: {
     fontSize: 12,
     color: '#777',
     marginTop: 4
   },
-
+  imgTrabalhoLateral: {
+  width: 95,
+  height: 95,
+  borderRadius: 14,
+  marginLeft: 10,
+  resizeMode: 'cover'
+},
   semResultadoTexto: {
     textAlign: 'center',
     color: '#777',

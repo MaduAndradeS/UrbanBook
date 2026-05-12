@@ -1,3 +1,4 @@
+const prisma = require('../lib/prisma');
 const empresarioService = require('../services/empresario.service');
 const cloudinary = require('cloudinary').v2;
 
@@ -14,12 +15,16 @@ const {
   validarTelefone
 } = require('../utils/validacoes');
 
+// REMOVE SENHA DO RETORNO
 const removerSenha = (empresario) => {
   if (!empresario) return empresario;
+
   const { SENHA_HASH, ...empresarioSemSenha } = empresario;
+
   return empresarioSemSenha;
 };
 
+// REMOVE IMAGEM DO CLOUDINARY CASO HAJA ERRO
 const apagarImagemCloudinary = async (req) => {
   if (req.file && req.file.filename) {
     try {
@@ -31,6 +36,7 @@ const apagarImagemCloudinary = async (req) => {
   }
 };
 
+// LISTAR EMPRESÁRIOS
 exports.listarEmpresarios = async (req, res) => {
   try {
     const { busca, categoria } = req.query;
@@ -50,9 +56,11 @@ exports.listarEmpresarios = async (req, res) => {
   }
 };
 
+// LISTAR PENDENTES
 exports.listarEmpresariosPendentes = async (req, res) => {
   try {
     const empresarios = await empresarioService.listarEmpresariosPendentes();
+
     return res.status(200).json(empresarios.map(removerSenha));
   } catch (error) {
     return res.status(500).json({
@@ -62,12 +70,15 @@ exports.listarEmpresariosPendentes = async (req, res) => {
   }
 };
 
+// BUSCAR POR ID
 exports.buscarEmpresarioPorId = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
     if (!id || isNaN(id)) {
-      return res.status(400).json({ message: 'ID inválido' });
+      return res.status(400).json({
+        message: 'ID inválido'
+      });
     }
 
     const empresario = await empresarioService.buscarEmpresarioPorId(id);
@@ -87,6 +98,7 @@ exports.buscarEmpresarioPorId = async (req, res) => {
   }
 };
 
+// CRIAR EMPRESÁRIO
 exports.criarEmpresario = async (req, res) => {
   try {
     const {
@@ -108,6 +120,7 @@ exports.criarEmpresario = async (req, res) => {
       !telefone
     ) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'Todos os campos obrigatórios devem ser preenchidos'
       });
@@ -115,6 +128,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!Array.isArray(servicos) || servicos.length === 0) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'Selecione pelo menos um serviço'
       });
@@ -122,6 +136,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!validarCNPJ(cnpj)) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'CNPJ inválido'
       });
@@ -129,6 +144,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!validarEmail(email)) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'Email inválido'
       });
@@ -136,6 +152,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!validarCEP(cep)) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'CEP inválido'
       });
@@ -143,6 +160,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!validarTelefone(telefone)) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'Telefone inválido'
       });
@@ -155,6 +173,7 @@ exports.criarEmpresario = async (req, res) => {
 
     if (!coordenadas) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'Não foi possível localizar este endereço no mapa'
       });
@@ -179,7 +198,8 @@ exports.criarEmpresario = async (req, res) => {
       foto_perfil: fotoPerfilUrl
     };
 
-    const novoEmpresario = await empresarioService.criarEmpresario(bodyTratado);
+    const novoEmpresario =
+      await empresarioService.criarEmpresario(bodyTratado);
 
     return res.status(201).json(removerSenha(novoEmpresario));
   } catch (error) {
@@ -198,12 +218,14 @@ exports.criarEmpresario = async (req, res) => {
   }
 };
 
+// FOTO DE TRABALHO
 exports.adicionarFotoTrabalho = async (req, res) => {
   try {
     const { id_empresario } = req.body;
 
     if (!id_empresario) {
       await apagarImagemCloudinary(req);
+
       return res.status(400).json({
         message: 'ID do empresário é obrigatório'
       });
@@ -236,6 +258,7 @@ exports.adicionarFotoTrabalho = async (req, res) => {
   }
 };
 
+// APROVAR EMPRESÁRIO
 exports.aprovarEmpresario = async (req, res) => {
   try {
     const idEmpresario = Number(req.params.id);
@@ -247,10 +270,11 @@ exports.aprovarEmpresario = async (req, res) => {
       });
     }
 
-    const empresarioAtualizado = await empresarioService.aprovarEmpresario(
-      idEmpresario,
-      Number(idAdm)
-    );
+    const empresarioAtualizado =
+      await empresarioService.aprovarEmpresario(
+        idEmpresario,
+        Number(idAdm)
+      );
 
     return res.status(200).json({
       message: 'Empresário aprovado com sucesso',
@@ -264,23 +288,48 @@ exports.aprovarEmpresario = async (req, res) => {
   }
 };
 
+// CONFIGURAR DISPONIBILIDADE
 exports.configurarDisponibilidade = async (req, res) => {
   try {
-    const { ID_EMPRESARIO } = req.body;
+    const {
+      ID_EMPRESARIO,
+      DURACAO_MIN,
+      PERIODOS,
+      DIAS_ATIVOS
+    } = req.body;
 
-    if (!ID_EMPRESARIO) {
+    if (
+      !ID_EMPRESARIO ||
+      !DURACAO_MIN ||
+      !PERIODOS ||
+      !DIAS_ATIVOS
+    ) {
       return res.status(400).json({
-        message: 'ID do empresário não informado'
+        message: 'Dados obrigatórios ausentes.'
       });
     }
 
-    const resultado = await empresarioService.salvarDisponibilidade(req.body);
+    console.log(
+      'Dados recebidos para salvar disponibilidade:',
+      req.body
+    );
+
+    const disponibilidade =
+      await empresarioService.salvarDisponibilidade(
+        req.body
+      );
 
     return res.status(200).json({
       message: 'Agenda salva com sucesso',
-      data: resultado
+      data: disponibilidade
     });
+
   } catch (error) {
+    console.error(
+      'Erro real ao salvar disponibilidade:',
+      error
+    );
+
     return res.status(500).json({
       message: 'Erro ao salvar disponibilidade',
       error: error.message
@@ -288,13 +337,21 @@ exports.configurarDisponibilidade = async (req, res) => {
   }
 };
 
+// BUSCAR DISPONIBILIDADE
 exports.buscarDisponibilidade = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    const disponibilidade = await empresarioService.buscarDisponibilidadePorId(id);
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        message: 'ID inválido'
+      });
+    }
 
-    if (!disponibilidade) {
+    const disponibilidade =
+      await empresarioService.buscarDisponibilidadePorId(id);
+
+    if (!disponibilidade || disponibilidade.length === 0) {
       return res.status(404).json({
         message: 'Agenda não configurada'
       });
@@ -302,6 +359,11 @@ exports.buscarDisponibilidade = async (req, res) => {
 
     return res.status(200).json(disponibilidade);
   } catch (error) {
+    console.error(
+      'Erro real ao buscar disponibilidade:',
+      error
+    );
+
     return res.status(500).json({
       message: 'Erro ao buscar disponibilidade',
       error: error.message
@@ -309,6 +371,37 @@ exports.buscarDisponibilidade = async (req, res) => {
   }
 };
 
+// EXCLUIR DISPONIBILIDADE
+exports.excluirDisponibilidade = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        message: 'ID inválido'
+      });
+    }
+
+    await empresarioService.excluirDisponibilidade(Number(id));
+
+    return res.status(200).json({
+      message: 'Disponibilidade excluída com sucesso'
+    });
+
+  } catch (error) {
+    console.error(
+      'Erro ao excluir disponibilidade:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Erro ao excluir disponibilidade',
+      error: error.message
+    });
+  }
+};
+
+// LISTAR PRÓXIMOS
 exports.listarEmpresariosProximos = async (req, res) => {
   try {
     const { lat, lng, raio } = req.query;
@@ -319,13 +412,16 @@ exports.listarEmpresariosProximos = async (req, res) => {
       });
     }
 
-    const empresarios = await empresarioService.listarEmpresariosProximos(
-      Number(lat),
-      Number(lng),
-      raio ? Number(raio) : 10
-    );
+    const empresarios =
+      await empresarioService.listarEmpresariosProximos(
+        Number(lat),
+        Number(lng),
+        raio ? Number(raio) : 10
+      );
 
-    return res.status(200).json(empresarios.map(removerSenha));
+    return res.status(200).json(
+      empresarios.map(removerSenha)
+    );
   } catch (error) {
     return res.status(500).json({
       message: 'Erro ao buscar empresários próximos',

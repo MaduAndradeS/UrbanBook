@@ -8,10 +8,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.225:3333/api';
-const ID_CLIENTE = 1;
+import { API_URL } from '../../config/api';
 
 type Status = 'confirmado' | 'pendente';
 
@@ -24,6 +25,8 @@ interface Appointment {
   day: number;
   month: number; 
   year: number;
+  foto: string | null; // Adicionado suporte para foto
+  isCancelado: boolean;
 }
 
 function filterByMonth(data: Appointment[], month: number, year: number) {
@@ -43,7 +46,7 @@ const STATUS = {
 };
 
 const INITIAL_YEAR  = 2026;
-const INITIAL_MONTH = 3; 
+const INITIAL_MONTH = 4;
 
 export default function AgendamentosScreen() {
   const [year, setYear]         = useState(INITIAL_YEAR);
@@ -59,28 +62,48 @@ export default function AgendamentosScreen() {
   async function buscarDoBanco() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/agendamentos/cliente/${ID_CLIENTE}`);
+      const idSalvo = await AsyncStorage.getItem('id_usuario');
+      if (!idSalvo) {
+         setLoading(false);
+         return;
+      }
+
+      const res = await fetch(`${API_URL}/agendamentos/cliente/${idSalvo}`);
       if (res.ok) {
         const banco = await res.json();
-        
-        // 🟢 BLINDAGEM DO .MAP(): Evita tela vermelha
         const dadosSeguros = Array.isArray(banco) ? banco : [];
         
         const convertidos: Appointment[] = dadosSeguros.map((ag: any) => {
-          const d = new Date(ag.dataInteira || ag.DATA_HORA || new Date());
-          return {
-            id: String(ag.id),
-            name: ag.empresa || 'Sem nome',
-            date: `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth()+1).padStart(2, '0')}/${d.getUTCFullYear()}`,
-            time: ag.hora || '00:00',
-            status: (ag.status || '').toLowerCase() === 'confirmado' ? 'confirmado' : 'pendente',
-            day: d.getUTCDate(),
-            month: d.getUTCMonth(),
-            year: d.getUTCFullYear()
-          };
+          const idAgendamento = ag.ID_AGENDAMENTO || ag.ID_AGENDA || ag.id;
+          const id = String(idAgendamento || Math.random());
+          
+          const isConfirmado = ag.CONFIRMACAO === true || ag.confirmacao === true;
+          const isCancelado = ag.CANCELAMENTO === true || ag.cancelamento === true;
+          const status: Status = isConfirmado ? 'confirmado' : 'pendente';
+          
+          const name = ag.EMPRESARIO?.NOME || ag.empresa || 'Profissional';
+          const foto = ag.EMPRESARIO?.FOTO_PERFIL || null; // Puxa a foto do Empresário
+          
+          let day = 1, monthAg = 0, yearAg = 2026;
+          let dateFmt = 'Sem Data', timeFmt = '00:00';
+          
+          let rawDate = ag.DATA_HORA || ag.data_hora || ag.createdAt;
+          if (rawDate) {
+              rawDate = String(rawDate);
+              if (rawDate.includes('T')) {
+                  const dObj = new Date(rawDate);
+                  dObj.setUTCHours(dObj.getUTCHours() - 3); // Corrige Fuso para o calendário marcar certo
+                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
+                  timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+              }
+          }
+
+          return { id, name, date: dateFmt, time: timeFmt, status, day, month: monthAg, year: yearAg, foto, isCancelado };
         });
         
-        setMonthData(filterByMonth(convertidos, month, year));
+        const convertidosValidos = convertidos.filter(item => !item.isCancelado && item.date !== 'Sem Data');
+        setMonthData(filterByMonth(convertidosValidos, month, year));
       } else {
         setMonthData([]);
       }
@@ -101,11 +124,7 @@ export default function AgendamentosScreen() {
 
   return (
     <SafeAreaView style={s.safeArea}>
-      
-      {/* Esconde a barra de navegação nativa do Expo */}
       <Stack.Screen options={{ headerShown: false }} />
-
-      {/* Cabeçalho fixo */}
       <View style={s.headerRow}>
         <Text style={s.pageTitle}>Meus Agendamentos</Text>
       </View>
@@ -114,19 +133,34 @@ export default function AgendamentosScreen() {
 
         <View style={s.calendarCard}>
           {loading ? <ActivityIndicator color="#67C5C0" style={{ padding: 40 }} /> : (
-              <Calendar initialYear={INITIAL_YEAR} initialMonth={INITIAL_MONTH} selectedDay={selectedDay} onSelectDay={(day) => setDay(day)} onMonthChange={handleMonthChange} confirmedDays={confirmedDays(monthData)} pendingDays={pendingOnlyDays(monthData)} />
+              <Calendar 
+                 initialYear={INITIAL_YEAR} 
+                 initialMonth={INITIAL_MONTH} 
+                 selectedDay={selectedDay} 
+                 onSelectDay={(day) => setDay(day)} 
+                 onMonthChange={handleMonthChange} 
+                 confirmedDays={confirmedDays(monthData)} 
+                 pendingDays={pendingOnlyDays(monthData)} 
+              />
             )}
         </View>
 
         <Text style={s.sectionTitle}>
-          {dayAppointments.length > 0 ? `Agendamentos do dia ${selectedDay}` : `Nenhum agendamento no dia ${selectedDay}`}
+          {dayAppointments.length > 0 ? `Agendamentos do dia ${selectedDay}` : `Sem compromissos no dia ${selectedDay}`}
         </Text>
 
         {dayAppointments.map(item => {
           const cfg = STATUS[item.status];
           return (
             <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
-              <View style={s.iconCircle}><Text style={s.iconEmoji}>{cfg.icon}</Text></View>
+              <View style={s.iconCircle}>
+                {/* Lógica da Imagem Ativada */}
+                {item.foto ? (
+                  <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
+                ) : (
+                  <Text style={s.iconEmoji}>{cfg.icon}</Text>
+                )}
+              </View>
               <View style={s.cardInfo}>
                 <Text style={s.cardName}>{item.name}</Text>
                 <Text style={s.cardDate}>{item.date} • {item.time}</Text>
@@ -143,7 +177,14 @@ export default function AgendamentosScreen() {
               const cfg = STATUS[item.status];
               return (
                 <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
-                  <View style={s.iconCircle}><Text style={s.iconEmoji}>{cfg.icon}</Text></View>
+                  <View style={s.iconCircle}>
+                    {/* Lógica da Imagem Ativada */}
+                    {item.foto ? (
+                      <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
+                    ) : (
+                      <Text style={s.iconEmoji}>{cfg.icon}</Text>
+                    )}
+                  </View>
                   <View style={s.cardInfo}>
                     <Text style={s.cardName}>{item.name}</Text>
                     <Text style={s.cardDate}>{item.date} • {item.time}</Text>
@@ -169,6 +210,7 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
   card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, alignItems: 'center' },
   iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  fotoAvatar: { width: 48, height: 48, borderRadius: 24 }, // Estilo da Foto Adicionado
   iconEmoji:  { fontSize: 22 },
   cardInfo:   { flex: 1 },
   cardName:   { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 3 },

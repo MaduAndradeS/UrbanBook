@@ -15,7 +15,6 @@ exports.listarClientes = async (termoBusca) => {
     include: {
       ENDERECO: true,
       TELEFONE: true
-      // A FOTO_PERFIL já vem por padrão no findMany
     }
   });
 };
@@ -48,31 +47,31 @@ exports.criarCliente = async (data) => {
     }
   });
 
-  //buscar latitude e longitude antes de criar endereço
+  // buscar latitude e longitude antes de criar endereço
   const coordenadas = await geocodingService.buscarCoordenadas({
-  rua: data.rua,
-  num: data.num,
-  bairro: data.bairro,
-  cidade: data.cidade,
-  estado: data.estado,
-  cep: data.cep
-});
+    rua: data.rua,
+    num: data.num,
+    bairro: data.bairro,
+    cidade: data.cidade,
+    estado: data.estado,
+    cep: data.cep
+  });
 
   // 2. Criar o Endereço
- await prisma.eNDERECO.create({
-  data: {
-    ID_CLIENTE: novoCliente.ID_CLIENTE,
-    RUA: data.rua,
-    NUM: data.num ? Number(data.num) : null,
-    BAIRRO: data.bairro,
-    CIDADE: data.cidade,
-    ESTADO: data.estado,
-    CEP: data.cep,
-    COMP: data.comp || null,
-    LATITUDE: data.latitude || null,
-    LONGITUDE: data.longitude || null
-  }
-});
+  await prisma.eNDERECO.create({
+    data: {
+      ID_CLIENTE: novoCliente.ID_CLIENTE,
+      RUA: data.rua,
+      NUM: data.num ? Number(data.num) : null,
+      BAIRRO: data.bairro,
+      CIDADE: data.cidade,
+      ESTADO: data.estado,
+      CEP: data.cep,
+      COMP: data.comp || null,
+      LATITUDE: data.latitude || null,
+      LONGITUDE: data.longitude || null
+    }
+  });
 
   // 3. Criar o Telefone
   await prisma.tELEFONE.create({
@@ -91,5 +90,20 @@ exports.criarCliente = async (data) => {
       ENDERECO: true,
       TELEFONE: true
     }
+  });
+};
+
+// ATUALIZAR CLIENTE (AGORA FORA DO CRIAR CLIENTE)
+exports.atualizarCliente = async (id, dados) => {
+  return await prisma.cLIENTE.update({
+    where: { ID_CLIENTE: Number(id) },
+    data: {
+      NOME: dados.nome,
+      TELEFONE: {
+        deleteMany: {}, 
+        create: { TELEFONE: dados.telefone }
+      }
+    },
+    include: { TELEFONE: true, ENDERECO: true }
   });
 };

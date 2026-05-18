@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
+const bcrypt = require('bcryptjs');
 
 exports.listarEmpresarios = async (
   termoBusca,
@@ -86,13 +87,19 @@ exports.buscarEmpresarioPorId = async (id) => {
 };
 
 exports.criarEmpresario = async (data) => {
+
+  const senhaHash = await bcrypt.hash(
+      data.senha,
+      10
+    );
+
   const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
       NOME: data.nome,
       CNPJ: data.cnpj,
       BIO: data.bio || null,
       EMAIL: data.email,
-      SENHA_HASH: data.senha,
+      SENHA_HASH: senhaHash,
       FOTO_PERFIL: data.foto_perfil,
       ID_ADM: null
     }

@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
+const bcrypt = require('bcryptjs');
 
 // listar clientes com busca opcional
 exports.listarClientes = async (termoBusca) => {
@@ -34,20 +35,27 @@ exports.buscarClientePorId = async (id) => {
 
 // criar cliente
 exports.criarCliente = async (data) => {
-  // 1. Criar o Cliente com a URL da foto
+
+  const senhaHash = await bcrypt.hash(
+    data.senha,
+    10
+  );
+
   const novoCliente = await prisma.cLIENTE.create({
     data: {
       NOME: data.nome,
       CPF: data.cpf,
       DATA_NASC: new Date(data.data_nasc),
       EMAIL: data.email,
-      SENHA_HASH: data.senha,
+
+      // AGORA CRIPTOGRAFADA
+      SENHA_HASH: senhaHash,
+
       FOTO_PERFIL: data.foto_perfil || null,
       ID_EMPRESARIO: data.id_empresario || null
     }
   });
 
-  // buscar latitude e longitude antes de criar endereço
   const coordenadas = await geocodingService.buscarCoordenadas({
     rua: data.rua,
     num: data.num,
@@ -57,7 +65,6 @@ exports.criarCliente = async (data) => {
     cep: data.cep
   });
 
-  // 2. Criar o Endereço
   await prisma.eNDERECO.create({
     data: {
       ID_CLIENTE: novoCliente.ID_CLIENTE,
@@ -68,12 +75,12 @@ exports.criarCliente = async (data) => {
       ESTADO: data.estado,
       CEP: data.cep,
       COMP: data.comp || null,
-      LATITUDE: data.latitude || null,
-      LONGITUDE: data.longitude || null
+
+      LATITUDE: coordenadas.latitude,
+      LONGITUDE: coordenadas.longitude
     }
   });
 
-  // 3. Criar o Telefone
   await prisma.tELEFONE.create({
     data: {
       ID_CLIENTE: novoCliente.ID_CLIENTE,
@@ -81,7 +88,6 @@ exports.criarCliente = async (data) => {
     }
   });
 
-  // 4. Retornar o cliente completo com as relações
   return await prisma.cLIENTE.findUnique({
     where: {
       ID_CLIENTE: novoCliente.ID_CLIENTE

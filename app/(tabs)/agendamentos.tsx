@@ -25,7 +25,7 @@ interface Appointment {
   day: number;
   month: number; 
   year: number;
-  foto: string | null; // Adicionado suporte para foto
+  foto: string | null;
   isCancelado: boolean;
 }
 
@@ -82,7 +82,7 @@ export default function AgendamentosScreen() {
           const status: Status = isConfirmado ? 'confirmado' : 'pendente';
           
           const name = ag.EMPRESARIO?.NOME || ag.empresa || 'Profissional';
-          const foto = ag.EMPRESARIO?.FOTO_PERFIL || null; // Puxa a foto do Empresário
+          const foto = ag.EMPRESARIO?.FOTO_PERFIL || null; 
           
           let day = 1, monthAg = 0, yearAg = 2026;
           let dateFmt = 'Sem Data', timeFmt = '00:00';
@@ -92,10 +92,15 @@ export default function AgendamentosScreen() {
               rawDate = String(rawDate);
               if (rawDate.includes('T')) {
                   const dObj = new Date(rawDate);
-                  dObj.setUTCHours(dObj.getUTCHours() - 3); // Corrige Fuso para o calendário marcar certo
-                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  
+                  // CORREÇÃO INFALÍVEL DA DIFERENÇA DE HORAS (Calcula UTC-3 puro)
+                  const brDate = new Date(dObj.getTime() - 3 * 60 * 60 * 1000);
+                  day = brDate.getUTCDate(); 
+                  monthAg = brDate.getUTCMonth(); 
+                  yearAg = brDate.getUTCFullYear();
+                  
                   dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
-                  timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+                  timeFmt = `${String(brDate.getUTCHours()).padStart(2, '0')}:${String(brDate.getUTCMinutes()).padStart(2, '0')}`;
               }
           }
 
@@ -154,7 +159,6 @@ export default function AgendamentosScreen() {
           return (
             <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
               <View style={s.iconCircle}>
-                {/* Lógica da Imagem Ativada */}
                 {item.foto ? (
                   <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
                 ) : (
@@ -178,7 +182,6 @@ export default function AgendamentosScreen() {
               return (
                 <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.8}>
                   <View style={s.iconCircle}>
-                    {/* Lógica da Imagem Ativada */}
                     {item.foto ? (
                       <Image source={{ uri: item.foto }} style={s.fotoAvatar} />
                     ) : (
@@ -210,7 +213,7 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
   card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, alignItems: 'center' },
   iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  fotoAvatar: { width: 48, height: 48, borderRadius: 24 }, // Estilo da Foto Adicionado
+  fotoAvatar: { width: 48, height: 48, borderRadius: 24 },
   iconEmoji:  { fontSize: 22 },
   cardInfo:   { flex: 1 },
   cardName:   { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 3 },

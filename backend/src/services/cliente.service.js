@@ -2,6 +2,11 @@ const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
 const bcrypt = require('bcryptjs');
 
+const {
+  criptografar,
+  hashValor
+} = require('../utils/crypto.util.js');
+
 // listar clientes com busca opcional
 exports.listarClientes = async (termoBusca) => {
   return await prisma.cLIENTE.findMany({
@@ -41,57 +46,124 @@ exports.criarCliente = async (data) => {
     10
   );
 
-  const novoCliente = await prisma.cLIENTE.create({
-    data: {
-      NOME: data.nome,
-      CPF: data.cpf,
-      DATA_NASC: new Date(data.data_nasc),
-      EMAIL: data.email,
+  const cpfHash =
+    hashValor(data.cpf);
 
-      // AGORA CRIPTOGRAFADA
-      SENHA_HASH: senhaHash,
+  // VERIFICAR DUPLICIDADE
+  const cpfExistente =
+    await prisma.cLIENTE.findFirst({
+      where: {
+        CPF_HASH: cpfHash
+      }
+    });
 
-      FOTO_PERFIL: data.foto_perfil || null,
-      ID_EMPRESARIO: data.id_empresario || null
-    }
-  });
+  if (cpfExistente) {
+    throw new Error('CPF já cadastrado');
+  }
 
-  const coordenadas = await geocodingService.buscarCoordenadas({
-    rua: data.rua,
-    num: data.num,
-    bairro: data.bairro,
-    cidade: data.cidade,
-    estado: data.estado,
-    cep: data.cep
-  });
+  // CRIAR CLIENTE
+  const novoCliente =
+    await prisma.cLIENTE.create({
 
+      data: {
+
+        NOME: data.nome,
+
+        // CPF CRIPTOGRAFADO
+        CPF: criptografar(data.cpf),
+
+        // HASH PARA BUSCA
+        CPF_HASH: cpfHash,
+
+        DATA_NASC: new Date(data.data_nasc),
+
+        EMAIL: data.email,
+
+        SENHA_HASH: senhaHash,
+
+        FOTO_PERFIL:
+          data.foto_perfil || null,
+
+        ID_EMPRESARIO:
+          data.id_empresario || null
+      }
+    });
+
+
+
+  // BUSCAR COORDENADAS
+  const coordenadas =
+    await geocodingService.buscarCoordenadas({
+
+      rua: data.rua,
+      num: data.num,
+      bairro: data.bairro,
+      cidade: data.cidade,
+      estado: data.estado,
+      cep: data.cep
+    });
+
+
+
+  // ENDEREÇO
   await prisma.eNDERECO.create({
+
     data: {
-      ID_CLIENTE: novoCliente.ID_CLIENTE,
+
+      ID_CLIENTE:
+        novoCliente.ID_CLIENTE,
+
       RUA: data.rua,
-      NUM: data.num ? Number(data.num) : null,
+
+      NUM:
+        data.num
+          ? Number(data.num)
+          : null,
+
       BAIRRO: data.bairro,
+
       CIDADE: data.cidade,
+
       ESTADO: data.estado,
+
       CEP: data.cep,
-      COMP: data.comp || null,
 
-      LATITUDE: coordenadas.latitude,
-      LONGITUDE: coordenadas.longitude
+      COMP:
+        data.comp || null,
+
+      LATITUDE:
+        coordenadas.latitude,
+
+      LONGITUDE:
+        coordenadas.longitude
     }
   });
 
+
+
+  // TELEFONE
   await prisma.tELEFONE.create({
+
     data: {
-      ID_CLIENTE: novoCliente.ID_CLIENTE,
-      TELEFONE: data.telefone
+
+      ID_CLIENTE:
+        novoCliente.ID_CLIENTE,
+
+      TELEFONE:
+        data.telefone
     }
   });
 
+
+
+  // RETORNAR CLIENTE
   return await prisma.cLIENTE.findUnique({
+
     where: {
-      ID_CLIENTE: novoCliente.ID_CLIENTE
+      ID_CLIENTE:
+        novoCliente.ID_CLIENTE
     },
+
     include: {
       ENDERECO: true,
       TELEFONE: true

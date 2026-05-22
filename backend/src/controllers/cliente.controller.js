@@ -15,8 +15,16 @@ const {
 } = require('../utils/validacoes');
 
 const removerSenha = (cliente) => {
+
   if (!cliente) return cliente;
-  const { SENHA_HASH, ...clienteSemSenha } = cliente;
+
+  const {
+    SENHA_HASH,
+    CPF,
+    CPF_HASH,
+    ...clienteSemSenha
+  } = cliente;
+
   return clienteSemSenha;
 };
 
@@ -171,11 +179,19 @@ exports.criarCliente = async (req, res) => {
   } catch (error) {
     await apagarImagemCloudinary(req);
 
-    if (error.code === 'P2002') {
+    if (error.message === 'CPF já cadastrado') {
       return res.status(400).json({
-        message: 'CPF ou email já cadastrado'
+        message: 'CPF já cadastrado'
       });
     }
+
+    if (error.code === 'P2002') {
+      return res.status(400).json({
+        message: 'Email já cadastrado'
+      });
+    }
+
+    console.error(error);
 
     return res.status(500).json({
       message: 'Erro ao criar cliente',

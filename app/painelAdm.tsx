@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { router, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -11,8 +11,15 @@ import {
 } from 'react-native';
 import logo from '../assets/images/logo.png';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 
+const handleLogout = () => {
+    Alert.alert('Sair', 'Deseja terminar sessão?', [
+      { text: 'Não', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: async () => { await AsyncStorage.clear(); router.replace('/'); } },
+    ]);
+  };
 
 const ID_ADM_FIXO = 1;
 
@@ -180,7 +187,7 @@ export default function PainelAdm() {
 
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={() => router.replace('/')}
+            onPress={handleLogout}
           >
             <Text style={styles.logoutButtonText}>Sair</Text>
           </TouchableOpacity>

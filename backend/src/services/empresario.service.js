@@ -2,6 +2,11 @@ const prisma = require('../lib/prisma');
 const geocodingService = require('./geocoding.service');
 const bcrypt = require('bcryptjs');
 
+const {
+  criptografar,
+  hashValor
+} = require('../utils/crypto.util.js');
+
 exports.listarEmpresarios = async (
   termoBusca,
   apenasAprovados = false,
@@ -93,10 +98,25 @@ exports.criarEmpresario = async (data) => {
       10
     );
 
+    const cnpjHash =
+    hashValor(data.cnpj);
+
+    const cnpjExistente =
+    await prisma.eMPRESARIO.findFirst({
+      where: {
+        CNPJ_HASH: cnpjHash
+      }
+    });
+
+  if (cnpjExistente) {
+    throw new Error('CNPJ já cadastrado');
+  }
+
   const novoEmpresario = await prisma.eMPRESARIO.create({
     data: {
       NOME: data.nome,
-      CNPJ: data.cnpj,
+      CNPJ: criptografar(data.cnpj),
+      CNPJ_HASH: cnpjHash,
       BIO: data.bio || null,
       EMAIL: data.email,
       SENHA_HASH: senhaHash,

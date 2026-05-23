@@ -17,9 +17,15 @@ const {
 
 // REMOVE SENHA DO RETORNO
 const removerSenha = (empresario) => {
+
   if (!empresario) return empresario;
 
-  const { SENHA_HASH, ...empresarioSemSenha } = empresario;
+  const {
+    SENHA_HASH,
+    CNPJ,
+    CNPJ_HASH,
+    ...empresarioSemSenha
+  } = empresario;
 
   return empresarioSemSenha;
 };
@@ -207,9 +213,17 @@ exports.criarEmpresario = async (req, res) => {
 
     if (error.code === 'P2002') {
       return res.status(400).json({
-        message: 'CNPJ ou email já cadastrado'
+        message: 'Email já cadastrado'
       });
     }
+
+    if (error.message == 'CNPJ já cadastrado') {
+      return res.status(400).json({
+        message: 'CNPJ já cadastrado'
+      })
+    }
+
+    console.error(error);
 
     return res.status(500).json({
       message: 'Erro ao criar empresário',

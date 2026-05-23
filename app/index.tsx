@@ -69,10 +69,14 @@ export default function App() {
       }
 
       if (!id) {
+        if (data.tipo === 'ADM') {
+        router.replace('/painelAdm');
+      } else{
         Alert.alert("Erro", "ID do usuário não retornado pelo servidor");
         setLogando(false);
         return;
       }
+    }
 
       await AsyncStorage.setItem('id_usuario', String(id));
       await AsyncStorage.setItem('tipo_usuario', data.tipo);

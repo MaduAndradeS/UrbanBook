@@ -94,10 +94,15 @@ export default function AtendimentosScreen() {
               rawDate = String(rawDate);
               if (rawDate.includes('T')) {
                   const dObj = new Date(rawDate);
-                  dObj.setUTCHours(dObj.getUTCHours() - 3); 
-                  day = dObj.getDate(); monthAg = dObj.getMonth(); yearAg = dObj.getFullYear();
+                  
+                  // CORREÇÃO INFALÍVEL DA DIFERENÇA DE HORAS (Calcula UTC-3 puro)
+                  const brDate = new Date(dObj.getTime() - 3 * 60 * 60 * 1000);
+                  day = brDate.getUTCDate(); 
+                  monthAg = brDate.getUTCMonth(); 
+                  yearAg = brDate.getUTCFullYear();
+                  
                   dateFmt = `${String(day).padStart(2, '0')}/${String(monthAg + 1).padStart(2, '0')}/${yearAg}`;
-                  timeFmt = `${String(dObj.getHours()).padStart(2, '0')}:${String(dObj.getMinutes()).padStart(2, '0')}`;
+                  timeFmt = `${String(brDate.getUTCHours()).padStart(2, '0')}:${String(brDate.getUTCMinutes()).padStart(2, '0')}`;
               }
           }
 
@@ -144,8 +149,6 @@ export default function AtendimentosScreen() {
 
   return (
     <SafeAreaView style={s.safeArea}>
-
-      {/* LINHA DO SININHO FORA DO CABEÇALHO */}
       <View style={s.topBarRow}>
          <TouchableOpacity style={s.notifBtn} onPress={() => setNotifVisible(true)}>
            <Text style={{ fontSize: 22 }}>🔔</Text>
@@ -215,13 +218,10 @@ export default function AtendimentosScreen() {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  
-  // Estilos da nova barra do sininho
   topBarRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5 },
   notifBtn: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', borderRadius: 22.5, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E53935', borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  
   scroll: { flex: 1, paddingHorizontal: 20 },
   sectionTitleMain: { fontSize: 26, fontWeight: 'bold', color: '#111', marginTop: 5, marginBottom: 15 },
   calendarCard: { backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },

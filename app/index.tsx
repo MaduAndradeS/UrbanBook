@@ -69,10 +69,14 @@ export default function App() {
       }
 
       if (!id) {
+        if (data.tipo === 'ADM') {
+        router.replace('/painelAdm');
+      } else{
         Alert.alert("Erro", "ID do usuário não retornado pelo servidor");
         setLogando(false);
         return;
       }
+    }
 
       await AsyncStorage.setItem('id_usuario', String(id));
       await AsyncStorage.setItem('tipo_usuario', data.tipo);
@@ -132,7 +136,7 @@ export default function App() {
             editable={!logando}
           />
 
-          <TouchableOpacity onPress={() => router.push('/RecSenha')} disabled={logando}>
+          <TouchableOpacity onPress={() => router.push('/EsqueciSenha')} disabled={logando}>
             <Text style={styles.forgot}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
@@ -157,13 +161,6 @@ export default function App() {
             <Text style={styles.registerText}>Cadastre-se</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={() => router.replace('/EsperaAprov')}
-            disabled={logando}
-          >
-            <Text>Continuar com Google</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </>

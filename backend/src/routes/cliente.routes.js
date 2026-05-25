@@ -8,6 +8,12 @@ const upload = multer({ storage });
 const prisma = require('../lib/prisma');
 const clienteController = require('../controllers/cliente.controller');
 
+router.post(
+  "/esqueci-senha",
+  clienteController.esqueciSenha
+);
+
+
 //  LISTAR + BUSCAR
 router.get('/', clienteController.listarClientes);
 
@@ -47,4 +53,8 @@ router.patch('/perfil/foto', upload.single('foto'), async (req, res) => {
   }
 });
 
+router.post("/redefinir-senha", clienteController.redefinirSenha);
+
+
 module.exports = router;
+

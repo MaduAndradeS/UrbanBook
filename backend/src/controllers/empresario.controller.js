@@ -17,9 +17,15 @@ const {
 
 // REMOVE SENHA DO RETORNO
 const removerSenha = (empresario) => {
+
   if (!empresario) return empresario;
 
-  const { SENHA_HASH, ...empresarioSemSenha } = empresario;
+  const {
+    SENHA_HASH,
+    CNPJ,
+    CNPJ_HASH,
+    ...empresarioSemSenha
+  } = empresario;
 
   return empresarioSemSenha;
 };
@@ -207,9 +213,17 @@ exports.criarEmpresario = async (req, res) => {
 
     if (error.code === 'P2002') {
       return res.status(400).json({
-        message: 'CNPJ ou email já cadastrado'
+        message: 'Email já cadastrado'
       });
     }
+
+    if (error.message == 'CNPJ já cadastrado') {
+      return res.status(400).json({
+        message: 'CNPJ já cadastrado'
+      })
+    }
+
+    console.error(error);
 
     return res.status(500).json({
       message: 'Erro ao criar empresário',
@@ -427,5 +441,33 @@ exports.listarEmpresariosProximos = async (req, res) => {
       message: 'Erro ao buscar empresários próximos',
       error: error.message
     });
+  }
+};
+
+exports.esqueciSenha = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const resposta = await empresarioService.esqueciSenhaEmpresario(email);
+    return res.status(200).json(resposta);
+  } catch (error) {
+    return res.status(400).json({ erro: error.message });
+  }
+};
+
+exports.redefinirSenha = async (req, res) => {
+  try {
+    const { token, novaSenha } = req.body;
+
+    if (!token || !novaSenha) {
+      return res.status(400).json({ erro: "Token e nova senha são obrigatórios" });
+    }
+    if (novaSenha.length < 6) {
+      return res.status(400).json({ erro: "A senha deve ter pelo menos 6 caracteres" });
+    }
+
+    const resposta = await empresarioService.redefinirSenhaEmpresario(token, novaSenha);
+    return res.status(200).json(resposta);
+  } catch (error) {
+    return res.status(400).json({ erro: error.message });
   }
 };

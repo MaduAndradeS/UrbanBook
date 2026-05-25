@@ -7,6 +7,9 @@ const prisma = require('../lib/prisma');
 
 const empresarioController = require('../controllers/empresario.controller');
 
+router.post("/esqueci-senha", empresarioController.esqueciSenha);
+router.post("/redefinir-senha", empresarioController.redefinirSenha);
+
 // --- 1. CRIAÇÃO E LISTAGEM ---
 router.post('/', upload.single('foto'), empresarioController.criarEmpresario);
 router.get('/', empresarioController.listarEmpresarios);

@@ -506,3 +506,63 @@ exports.excluirDisponibilidade = async (idDisp) => {
     };
   });
 };
+
+const transporter = require("../mail");
+const crypto = require("crypto");
+
+exports.esqueciSenhaEmpresario = async (email) => {
+  const empresario = await prisma.eMPRESARIO.findFirst({
+    where: { EMAIL: email }
+  });
+
+  if (!empresario) throw new Error("Usuário não encontrado");
+
+  const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await prisma.eMPRESARIO.update({
+    where: { ID_EMPRESARIO: empresario.ID_EMPRESARIO },
+    data: {
+      RESET_TOKEN: codigo,
+      RESET_TOKEN_EXPIRA: new Date(Date.now() + 3600000)
+    }
+  });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: empresario.EMAIL,
+    subject: "Recuperação de senha - Urban Book",
+    html: `
+      <h2>Recuperação de senha</h2>
+      <p>Seu código de verificação é:</p>
+      <h1 style="letter-spacing: 8px;">${codigo}</h1>
+      <p>Este código expira em 1 hora.</p>
+      <p>Se você não solicitou isso, ignore este e-mail.</p>
+    `
+  });
+
+  return { mensagem: "Email enviado com sucesso" };
+};
+
+exports.redefinirSenhaEmpresario = async (token, novaSenha) => {
+  const empresario = await prisma.eMPRESARIO.findFirst({
+    where: {
+      RESET_TOKEN: token,
+      RESET_TOKEN_EXPIRA: { gt: new Date() }
+    }
+  });
+
+  if (!empresario) throw new Error("Código inválido ou expirado");
+
+  const senhaHash = await bcrypt.hash(novaSenha, 10);
+
+  await prisma.eMPRESARIO.update({
+    where: { ID_EMPRESARIO: empresario.ID_EMPRESARIO },
+    data: {
+      SENHA_HASH: senhaHash,
+      RESET_TOKEN: null,
+      RESET_TOKEN_EXPIRA: null
+    }
+  });
+
+  return { mensagem: "Senha redefinida com sucesso" };
+};

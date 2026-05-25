@@ -136,7 +136,7 @@ export default function App() {
             editable={!logando}
           />
 
-          <TouchableOpacity onPress={() => router.push('/RecSenha')} disabled={logando}>
+          <TouchableOpacity onPress={() => router.push('/EsqueciSenha')} disabled={logando}>
             <Text style={styles.forgot}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
@@ -161,13 +161,6 @@ export default function App() {
             <Text style={styles.registerText}>Cadastre-se</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={() => router.replace('/EsperaAprov')}
-            disabled={logando}
-          >
-            <Text>Continuar com Google</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </>

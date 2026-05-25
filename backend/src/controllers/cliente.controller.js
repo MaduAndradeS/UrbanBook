@@ -212,3 +212,46 @@ exports.atualizarCliente = async (req, res) => {
     return res.status(500).json({ erro: 'Erro ao atualizar cliente' });
   }
 };
+
+exports.esqueciSenha = async (req, res) => {
+
+  try {
+
+    const { email } = req.body;
+
+    const resposta =
+      await clienteService
+        .esqueciSenha(email);
+
+    return res
+      .status(200)
+      .json(resposta);
+
+  } catch (error) {
+
+    return res
+      .status(400)
+      .json({
+        erro: error.message
+      });
+  }
+};
+
+exports.redefinirSenha = async (req, res) => {
+  try {
+    const { token, novaSenha } = req.body;
+
+    if (!token || !novaSenha) {
+      return res.status(400).json({ erro: "Token e nova senha são obrigatórios" });
+    }
+
+    if (novaSenha.length < 6) {
+      return res.status(400).json({ erro: "A senha deve ter pelo menos 6 caracteres" });
+    }
+
+    const resposta = await clienteService.redefinirSenha(token, novaSenha);
+    return res.status(200).json(resposta);
+  } catch (error) {
+    return res.status(400).json({ erro: error.message });
+  }
+};

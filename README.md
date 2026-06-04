@@ -1,52 +1,87 @@
-# UrbanBook
-Aplicativo mobile desenvolvido para as matérias de PI - Desenvolvimento de Aplicativos e Banco de Dados
+# 📱 UrbanBook
 
-Guia de Execução do Projeto: UrbanBook
-Este documento detalha os passos necessários para configurar e executar a aplicação UrbanBook localmente. O projeto é dividido em duas partes: o Servidor (Back-End em Node.js com Prisma) e o Aplicativo (Front-End em React Native com Expo).
+> Aplicativo mobile desenvolvido para as matérias de PI - Projeto e Implementação de Aplicativos e Banco de Dados.
 
-1. Pré-requisitos
-  Antes de iniciar, certifique-se de ter instalado em sua máquina:
-    Node.js (versão 18 ou superior)
-    Git
-    Aplicativo Expo Go instalado no smartphone (para testar o app físico).
+## Guia de Execução do Projeto
+Este documento detalha os passos necessários para configurar e executar a aplicação UrbanBook localmente. O projeto é dividido em duas partes principais: o **Servidor** (Back-End em Node.js com Prisma) e o **Aplicativo** (Front-End em React Native com Expo).
 
-2. Clonando o Repositório
-  Abra o terminal e execute o comando abaixo para baixar o código-fonte do projeto:
+---
 
-  git clone https://github.com/MaduAndradeS/UrbanBook.git
-  
-  cd UrbanBook
+## 1. Pré-requisitos
+Antes de iniciar, certifique-se de ter instalado em sua máquina:
+- [Node.js](https://nodejs.org/) (versão 18 ou superior)
+- [Git](https://git-scm.com/)
+- Aplicativo **Expo Go** instalado no smartphone (para testar o app físico).
 
-  <img width="1919" height="1048" alt="image" src="https://github.com/user-attachments/assets/cef1511b-710f-478f-9ed5-5c2068196814" />
+---
 
-3. Configurando e Executando o Back-End (Servidor)
-  Abra um terminal e navegue até a pasta do servidor:
-  cd backend
+## 2. Clonando o Repositório
+Abra o terminal e execute o comando abaixo para baixar o código-fonte do projeto:
 
-  Passo 3.1: Instale todas as dependências do projeto.
-    npm install
+```bash
+git clone [https://github.com/MaduAndradeS/UrbanBook.git](https://github.com/MaduAndradeS/UrbanBook.git)
+cd UrbanBook
+```
 
-  Passo 3.2: Configure o Banco de Dados (Prisma ORM).
-    Gere o cliente do Prisma e sincronize as tabelas com o banco de dados:
-    npx prisma generate
-    npx prisma db push
+<img width="1919" height="1048" alt="image" src="https://github.com/user-attachments/assets/cef1511b-710f-478f-9ed5-5c2068196814" />
 
-  Passo 3.4: Inicie o servidor.
-    npm start
+---
 
-4. No aplicativo Expo, o celular físico não reconhece localhost. É necessário colocar o endereço de IP da máquina onde o servidor está rodando.
-  Edite o arquivo UrbanBook/config/api.ts e aponte para o IP da sua rede Wi-Fi local:
+## 3. Configurando e Executando o Back-End (Servidor)
+No terminal, navegue até a pasta do servidor:
 
-  # Exemplo de IP local. Verifique o seu IP via comando 'ipconfig' (Windows) ou 'ifconfig' (Mac/Linux)
-  EXPO_PUBLIC_API_URL="http://192.168.X.X:3000"
+```bash
+cd backend
+```
 
-  Passo 4.3: Em um novo terminal inicie o servidor do Expo dentro da pasta UrbanBook.
-    npx expo start
+**Passo 3.1: Instalar dependências**
+```bash
+npm install
+```
 
-  <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/da595f58-e257-47f7-b22e-1523887f1a4b" />
+**Passo 3.2: Configurar o Banco de Dados (Prisma ORM)**
+Gere o cliente do Prisma e sincronize as tabelas com o banco de dados:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-  5. Testando a Aplicação
-    Após rodar o comando do Expo, um QR Code aparecerá no terminal.
-      Conecte seu smartphone na mesma rede Wi-Fi do computador.
-      Abra o aplicativo Expo Go no celular e escaneie o QR Code (ou use a câmera do iPhone).
-      O aplicativo UrbanBook será compilado e aberto na tela do dispositivo, já integrado com o servidor local e o banco de dados.
+**Passo 3.3: Iniciar o servidor**
+```bash
+npm run dev
+```
+*(Mantenha este terminal aberto para que o servidor continue rodando).*
+
+---
+
+## 4. Configurando e Executando o Front-End (Aplicativo)
+
+No Expo, o celular físico não reconhece o endereço `localhost`. É estritamente necessário colocar o endereço de IP da máquina onde o servidor está rodando.
+
+**Passo 4.1: Configurar o IP Local**
+Edite o arquivo `UrbanBook/config/api.ts` e aponte para o IP da sua rede Wi-Fi local:
+
+```typescript
+// Exemplo de IP local. Verifique o seu IP via comando 'ipconfig' (Windows) ou 'ifconfig' (Mac/Linux)
+export const EXPO_PUBLIC_API_URL = "[http://192.168.](http://192.168.)X.X:3000";
+```
+
+**Passo 4.2: Iniciar o servidor do Expo**
+Em um **novo terminal**, certifique-se de que está na pasta raiz `UrbanBook` e execute:
+
+```bash
+npx expo start
+```
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/da595f58-e257-47f7-b22e-1523887f1a4b" />
+
+---
+
+## 5. Testando o Aplicativo
+Após rodar o comando do Expo, um **QR Code** aparecerá no terminal.
+
+1. Conecte seu smartphone na **mesma rede Wi-Fi** do computador.
+2. Abra o aplicativo **Expo Go** no celular e escaneie o QR Code (ou use a câmera, caso seja um iPhone).
+3. O aplicativo UrbanBook será compilado e aberto na tela do dispositivo, já integrado com o servidor local e o banco de dados.
+
+   

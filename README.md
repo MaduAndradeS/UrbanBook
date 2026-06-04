@@ -14,6 +14,7 @@ Este documento detalha os passos necessários para configurar e executar a aplic
   Abra o terminal e execute o comando abaixo para baixar o código-fonte do projeto:
 
   git clone https://github.com/MaduAndradeS/UrbanBook.git
+  
   cd UrbanBook
 
   <img width="1919" height="1048" alt="image" src="https://github.com/user-attachments/assets/cef1511b-710f-478f-9ed5-5c2068196814" />

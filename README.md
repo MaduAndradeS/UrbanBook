@@ -43,7 +43,7 @@ npm install
 Gere o cliente do Prisma e sincronize as tabelas com o banco de dados:
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma db pull
 ```
 
 **Passo 3.3: Iniciar o servidor**

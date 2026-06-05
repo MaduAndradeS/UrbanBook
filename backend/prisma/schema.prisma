@@ -29,7 +29,7 @@ model AGENDAMENTO {
 model CLIENTE {
   ID_CLIENTE         Int           @id @default(autoincrement())
   NOME               String        @db.VarChar(100)
-  CPF                String        @unique(map: "CPF") @db.Char(11)
+  CPF                String?       @unique(map: "CPF") @db.VarChar(255)
   DATA_NASC          DateTime      @db.Date
   EMAIL              String        @unique(map: "EMAIL") @db.VarChar(100)
   SENHA_HASH         String        @db.VarChar(255)
@@ -49,7 +49,7 @@ model CLIENTE {
 model EMPRESARIO {
   ID_EMPRESARIO      Int               @id @default(autoincrement())
   NOME               String            @db.VarChar(100)
-  CNPJ               String            @unique(map: "CNPJ") @db.Char(14)
+  CNPJ               String?           @unique(map: "CNPJ") @db.VarChar(255)
   BIO                String?           @db.VarChar(200)
   EMAIL              String            @unique(map: "EMAIL") @db.VarChar(100)
   SENHA_HASH         String            @db.VarChar(255)
@@ -143,4 +143,14 @@ model FOTO_TRABALHO {
   EMPRESARIO    EMPRESARIO @relation(fields: [ID_EMPRESARIO], references: [ID_EMPRESARIO], onDelete: Cascade, map: "FK_FOTO_TRABALHO_EMPRESARIO")
 
   @@index([ID_EMPRESARIO], map: "IDX_FOTO_TRABALHO_EMPRESARIO")
+}
+
+model log_aprovacao_empresario {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  id_empresario  Int      @db.UnsignedInt
+  id_adm         Int      @db.UnsignedInt
+  nome           String?  @db.VarChar(255)
+  bio            String?  @db.Text
+  email          String?  @db.VarChar(255)
+  data_aprovacao DateTime @default(now()) @db.DateTime(0)
 }

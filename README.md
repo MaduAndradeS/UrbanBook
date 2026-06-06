@@ -52,11 +52,20 @@ npm run dev
 ```
 *(Mantenha este terminal aberto para que o servidor continue rodando).*
 
+Nota de Resolução de Problemas: Se ocorrer algum erro ao iniciar o servidor, é porque algumas dependências não são instaladas automaticamente com o comando padrão. Para resolver, instale os seguintes pacotes manualmente:
+
+npm install bcryptjs crypto-js nodemailer
+
 ---
 
 ## 4. Configurando e Executando o Front-End (Aplicativo)
 
 No Expo, o celular físico não reconhece o endereço `localhost`. É estritamente necessário colocar o endereço de IP da máquina onde o servidor está rodando.
+
+**Passo 4.0: Instalar dependências do Front-End**
+Certifique-se de estar na pasta raiz do aplicativo (a mesma pasta onde se roda o npx expo start) e execute a instalação para garantir que todos os pacotes extras sejam baixados:
+
+npm install
 
 **Passo 4.1: Configurar o IP Local**
 Edite o arquivo `UrbanBook/config/api.ts` e aponte para o IP da sua rede Wi-Fi local:

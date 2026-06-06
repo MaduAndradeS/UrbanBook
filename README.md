@@ -59,7 +59,7 @@ Gere o cliente do Prisma e sincronize as tabelas com o banco de dados:
 npx prisma generate
 npx prisma db pull
 ```
-Este passo é opcional, podendo ser usado caso dê erro no backend:
+Este passo é opcional, o backend está em nuvem mas é possível utilizar desta maneira caso dê erro no local em que está hospedado (Railway):
 **Passo 3.3: Iniciar o servidor**
 ```bash
 npm run dev

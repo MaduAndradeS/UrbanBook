@@ -8,7 +8,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "package": "com.urbanbook.app"
     },
     "ios": {
       "supportsTablet": true
@@ -19,21 +20,29 @@
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
-        {
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
+  "expo-splash-screen",
+  {
+    "image": "./assets/images/splash.png",
+    "imageWidth": 200,
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff",
+    "dark": {
+      "image": "./assets/images/splash.png",
+      "backgroundColor": "#000000"
+    }
+  }
+],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6cdf7b2f-cafa-4880-9a98-5182a4dfc4b7"
+      }
     }
   }
 }

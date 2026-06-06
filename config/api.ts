@@ -1,1 +1,1 @@
-export const API_URL = 'http://192.168.5.199:3333/api';
+export const API_URL = 'https://urbanbook-backend-production.up.railway.app/api';
